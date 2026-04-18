@@ -1,5 +1,54 @@
 # Data Contracts
 
+## V1 Freeze (Approved)
+- Status: `Approved`
+- Date: `2026-04-18`
+- Scope reference: `Issue #20` (`[HITL] Freeze V1 API contract, Nemotron capability matrix, and clarification behavior`)
+
+### Frozen Nemotron Capability Matrix (`dataset=nemotron_usa`)
+Filter keys:
+
+| Key | Status |
+|---|---|
+| `states` | supported |
+| `age_range` | supported |
+| `sex` | supported |
+| `marital_status` | supported |
+| `education_level` | supported |
+| `occupation` | supported |
+| `income_brackets` | unsupported |
+| `household_income` | unsupported |
+| `ethnicity` | unsupported |
+
+Segmentation keys:
+
+| Key | Status |
+|---|---|
+| `by_age_group` | supported |
+| `by_marital_status` | supported |
+| `by_state` | supported |
+| `by_occupation_group` | supported |
+| `by_income_bracket` | unsupported |
+| `by_ethnicity` | unsupported |
+
+### Normative Contract Rules (Frozen for V1)
+- `POST /simulations` must reject any request containing one or more unsupported filter keys.
+- Rejected filter requests must return `400` with `error.code=UNSUPPORTED_FILTER`.
+- Filter rejection is strict: no partial acceptance and no silent key dropping.
+- Clarification loop is optional and non-blocking for `/simulations/{id}/run`.
+- Clarifications are multi-turn (`turn_index` increases until resolved or user skips).
+- Clarification transcript is ephemeral and must not be persisted in simulation history.
+- Only final `refined_policy_text` may be persisted.
+- `POST /simulations/{id}/run` with `use_refined_prompt=true` must use `refined_policy_text` when available; otherwise it must use base `policy_text`.
+
+### Contract Validation Scenarios
+1. Supported filter set request is accepted.
+2. Unsupported-only filter request returns `400` + `UNSUPPORTED_FILTER`.
+3. Mixed supported + unsupported filters returns `400` + `UNSUPPORTED_FILTER`.
+4. User can call `/run` without any clarification turns.
+5. Multi-turn clarification flow can continue across turns.
+6. Only `refined_policy_text` is retained in simulation history; no clarification transcript persistence.
+
 ## API Envelope (V1)
 All JSON responses follow:
 - `data`: object, array, or `null`
@@ -40,9 +89,7 @@ Optional fields:
 - `filters` (object, optional)
 
 `filters` optional keys:
-- `states` (array[string])
-- `income_brackets` (array[string], dataset-dependent; unsupported on current Nemotron split)
-- `age_range` (array[integer, integer])
+- Keys and support status are frozen in `V1 Freeze (Approved)`.
 
 ## Run Simulation Request Schema
 - `profile` (string, optional): `interactive|balanced|thorough|auto`
@@ -80,9 +127,7 @@ Clarification answer response:
 - `next_question_text` (string, nullable)
 
 Rules:
-- Clarification loop is optional and non-blocking for `/run`.
-- Clarification Q/A transcript is not persisted in simulation history.
-- Only final `refined_policy_text` is persisted.
+- Behavior is frozen in `V1 Freeze (Approved) -> Normative Contract Rules (Frozen for V1)`.
 
 ## Simulation Metadata Schema
 - `simulation_id` (string)

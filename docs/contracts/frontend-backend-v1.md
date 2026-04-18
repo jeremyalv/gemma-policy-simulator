@@ -1,5 +1,54 @@
 # Frontend <-> Backend API Contract (V1)
 
+## V1 Freeze (Approved)
+- Status: `Approved`
+- Date: `2026-04-18`
+- Scope reference: `Issue #20` (`[HITL] Freeze V1 API contract, Nemotron capability matrix, and clarification behavior`)
+
+### Frozen Nemotron Capability Matrix (`dataset=nemotron_usa`)
+Filter keys:
+
+| Key | Status |
+|---|---|
+| `states` | supported |
+| `age_range` | supported |
+| `sex` | supported |
+| `marital_status` | supported |
+| `education_level` | supported |
+| `occupation` | supported |
+| `income_brackets` | unsupported |
+| `household_income` | unsupported |
+| `ethnicity` | unsupported |
+
+Segmentation keys:
+
+| Key | Status |
+|---|---|
+| `by_age_group` | supported |
+| `by_marital_status` | supported |
+| `by_state` | supported |
+| `by_occupation_group` | supported |
+| `by_income_bracket` | unsupported |
+| `by_ethnicity` | unsupported |
+
+### Normative Contract Rules (Frozen for V1)
+- `POST /simulations` must reject any request containing one or more unsupported filter keys.
+- Rejected filter requests must return `400` with `error.code=UNSUPPORTED_FILTER`.
+- Filter rejection is strict: no partial acceptance and no silent key dropping.
+- Clarification loop is optional and non-blocking for `/simulations/{id}/run`.
+- Clarifications are multi-turn (`turn_index` increases until resolved or user skips).
+- Clarification transcript is ephemeral and must not be persisted in simulation history.
+- Only final `refined_policy_text` may be persisted.
+- `POST /simulations/{id}/run` with `use_refined_prompt=true` must use `refined_policy_text` when available; otherwise it must use base `policy_text`.
+
+### Contract Validation Scenarios
+1. Supported filter set request is accepted.
+2. Unsupported-only filter request returns `400` + `UNSUPPORTED_FILTER`.
+3. Mixed supported + unsupported filters returns `400` + `UNSUPPORTED_FILTER`.
+4. User can call `/run` without any clarification turns.
+5. Multi-turn clarification flow can continue across turns.
+6. Only `refined_policy_text` is retained in simulation history; no clarification transcript persistence.
+
 ## Base URL
 `http://localhost:8000/api/v1`
 
@@ -54,9 +103,8 @@ Request:
 ```
 
 Filter behavior:
-- Filters are dataset-capability-aware.
-- If a filter key is not supported by the selected dataset schema, server returns `400` with `error.code=UNSUPPORTED_FILTER`.
-- For the current `nemotron_usa` split, use structured keys such as `states`, `age_range`, `sex`, `marital_status`, `education_level`, and `occupation`.
+- Filters are dataset-capability-aware and follow the frozen matrix in `V1 Freeze (Approved)`.
+- Unsupported filter handling follows `Normative Contract Rules (Frozen for V1)`.
 
 Response `201`:
 ```json
@@ -260,8 +308,7 @@ Response `200`:
 
 ## Pre-Run Clarification Loop (Optional)
 
-Clarifications are optional. Users may skip them and run immediately.
-Clarification Q/A is not persisted in simulation history; only final refined prompt text is stored.
+Normative behavior is defined in `V1 Freeze (Approved) -> Normative Contract Rules (Frozen for V1)`.
 
 ### POST `/simulations/{id}/clarifications/generate`
 Generate the next clarification question to improve prompt quality before inference.
