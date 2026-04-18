@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Mapping, cast
 
 from packages.contracts.python.contracts_v1 import CreateSimulationRequest, FilterSet
 
 from .errors import ApiError
 
 SUPPORTED_DATASET = "nemotron_usa"
+ALLOWED_STATUSES = {"pending", "running", "completed", "failed"}
+ALLOWED_SORTS = {"created_at:asc", "created_at:desc"}
+DEFAULT_SORT = "created_at:desc"
+DEFAULT_PAGE = 1
+DEFAULT_LIMIT = 20
+MAX_LIMIT = 200
 SUPPORTED_FILTER_KEYS = {
     "states",
     "age_range",
@@ -102,3 +108,45 @@ def validate_create_simulation_payload(payload: Any) -> CreateSimulationRequest:
         request["filters"] = filters
 
     return cast(CreateSimulationRequest, request)
+
+
+def _parse_positive_int(name: str, value: str, *, minimum: int, maximum: int | None = None) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ApiError("VALIDATION_ERROR", f"{name} must be an integer")
+
+    if parsed < minimum:
+        raise ApiError("VALIDATION_ERROR", f"{name} must be >= {minimum}")
+    if maximum is not None and parsed > maximum:
+        raise ApiError("VALIDATION_ERROR", f"{name} must be <= {maximum}")
+    return parsed
+
+
+def validate_list_simulations_query(
+    query_params: Mapping[str, str],
+) -> tuple[int, int, str | None, str]:
+    page = DEFAULT_PAGE
+    limit = DEFAULT_LIMIT
+    status: str | None = None
+    sort = DEFAULT_SORT
+
+    if "page" in query_params:
+        page = _parse_positive_int("page", query_params["page"], minimum=1)
+
+    if "limit" in query_params:
+        limit = _parse_positive_int("limit", query_params["limit"], minimum=1, maximum=MAX_LIMIT)
+
+    if "status" in query_params:
+        status_value = query_params["status"]
+        if status_value not in ALLOWED_STATUSES:
+            raise ApiError("VALIDATION_ERROR", "status must be one of pending|running|completed|failed")
+        status = status_value
+
+    if "sort" in query_params:
+        sort_value = query_params["sort"]
+        if sort_value not in ALLOWED_SORTS:
+            raise ApiError("VALIDATION_ERROR", "sort must be created_at:asc or created_at:desc")
+        sort = sort_value
+
+    return page, limit, status, sort

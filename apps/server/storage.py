@@ -34,10 +34,20 @@ class SimulationStore:
                     filters_json TEXT,
                     status TEXT NOT NULL,
                     created_at TEXT NOT NULL,
+                    completed_at TEXT,
+                    mean_approval REAL,
                     refined_policy_text TEXT
                 )
                 """
             )
+            existing_columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(simulations)").fetchall()
+            }
+            if "completed_at" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN completed_at TEXT")
+            if "mean_approval" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN mean_approval REAL")
 
     def insert_simulation(self, row: dict[str, Any]) -> None:
         filters_json = json.dumps(row.get("filters")) if row.get("filters") else None
@@ -53,8 +63,10 @@ class SimulationStore:
                     filters_json,
                     status,
                     created_at,
+                    completed_at,
+                    mean_approval,
                     refined_policy_text
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row["id"],
@@ -65,6 +77,8 @@ class SimulationStore:
                     filters_json,
                     row["status"],
                     row["created_at"],
+                    row.get("completed_at"),
+                    row.get("mean_approval"),
                     row.get("refined_policy_text"),
                 ),
             )
@@ -89,5 +103,58 @@ class SimulationStore:
             "filters": filters_value,
             "status": row["status"],
             "created_at": row["created_at"],
+            "completed_at": row["completed_at"],
+            "mean_approval": row["mean_approval"],
             "refined_policy_text": row["refined_policy_text"],
         }
+
+    def count_simulations(self, status: str | None = None) -> int:
+        query = "SELECT COUNT(*) AS total FROM simulations"
+        params: tuple[Any, ...] = ()
+        if status is not None:
+            query += " WHERE status = ?"
+            params = (status,)
+
+        with self._connect() as conn:
+            row = conn.execute(query, params).fetchone()
+
+        return int(row["total"]) if row is not None else 0
+
+    def list_simulations(
+        self,
+        *,
+        page: int,
+        limit: int,
+        status: str | None,
+        sort: str,
+    ) -> list[dict[str, Any]]:
+        sort_dir = "ASC" if sort.endswith(":asc") else "DESC"
+        offset = (page - 1) * limit
+
+        query = """
+            SELECT id, title, status, sample_size, mean_approval, created_at, completed_at
+            FROM simulations
+        """
+        params: list[Any] = []
+        if status is not None:
+            query += " WHERE status = ?"
+            params.append(status)
+
+        query += f" ORDER BY created_at {sort_dir} LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        with self._connect() as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+
+        return [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "status": row["status"],
+                "sample_size": row["sample_size"],
+                "mean_approval": row["mean_approval"],
+                "created_at": row["created_at"],
+                "completed_at": row["completed_at"],
+            }
+            for row in rows
+        ]

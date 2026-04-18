@@ -6,7 +6,13 @@ from datetime import datetime, timezone
 from typing import Any, cast
 from uuid import uuid4
 
-from packages.contracts.python.contracts_v1 import CreateSimulationEnvelope, CreateSimulationRequest, SimulationDraft
+from packages.contracts.python.contracts_v1 import (
+    CreateSimulationEnvelope,
+    CreateSimulationRequest,
+    SimulationDraft,
+    SimulationListEnvelope,
+    SimulationListItem,
+)
 
 from .storage import SimulationStore
 
@@ -49,5 +55,47 @@ def create_simulation_draft(store: SimulationStore, request_body: CreateSimulati
             "data": data,
             "error": None,
             "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def list_simulation_history(
+    store: SimulationStore,
+    *,
+    page: int,
+    limit: int,
+    status: str | None,
+    sort: str,
+) -> SimulationListEnvelope:
+    rows = store.list_simulations(page=page, limit=limit, status=status, sort=sort)
+    total = store.count_simulations(status=status)
+
+    items = [
+        cast(
+            SimulationListItem,
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "status": row["status"],
+                "sample_size": row["sample_size"],
+                "mean_approval": row["mean_approval"],
+                "created_at": row["created_at"],
+                "completed_at": row["completed_at"],
+            },
+        )
+        for row in rows
+    ]
+
+    return cast(
+        SimulationListEnvelope,
+        {
+            "data": items,
+            "error": None,
+            "meta": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "request_id": new_request_id(),
+            },
         },
     )

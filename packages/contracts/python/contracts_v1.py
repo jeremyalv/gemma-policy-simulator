@@ -205,10 +205,10 @@ class SimulationListEnvelope(TypedDict, total=False):
     meta: Required[Meta]
 
 class SimulationListItem(TypedDict, total=False):
-    completed_at: Required[str]
+    completed_at: Required[str | None]
     created_at: Required[str]
     id: Required[str]
-    mean_approval: Required[float]
+    mean_approval: Required[float | None]
     sample_size: Required[int]
     status: Required[SimulationStatus]
     title: Required[str]

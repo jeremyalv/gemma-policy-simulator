@@ -12,9 +12,9 @@ from fastapi.responses import JSONResponse
 from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
 from .errors import ApiError
-from .service import create_simulation_draft, new_request_id
+from .service import create_simulation_draft, list_simulation_history, new_request_id
 from .storage import SimulationStore
-from .validation import validate_create_simulation_payload
+from .validation import validate_create_simulation_payload, validate_list_simulations_query
 
 
 def default_db_path() -> Path:
@@ -65,6 +65,24 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
         return JSONResponse(status_code=201, content=response)
+
+    @app.get("/api/v1/simulations", status_code=200)
+    async def get_simulations(request: Request) -> Any:
+        query_params = dict(request.query_params)
+
+        try:
+            page, limit, status, sort = validate_list_simulations_query(query_params)
+            response = list_simulation_history(
+                store,
+                page=page,
+                limit=limit,
+                status=status,
+                sort=sort,
+            )
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
 
     return app
 
