@@ -1,0 +1,1538 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SIMS Frontend-Backend Contract",
+    "version": "1.0.0",
+    "description": "Canonical V1 API contract for gemma-policy-simulator. This OpenAPI artifact is the single source of truth for shared request/response shapes."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "simulations"
+    },
+    {
+      "name": "clarifications"
+    },
+    {
+      "name": "challenge"
+    },
+    {
+      "name": "datasets"
+    },
+    {
+      "name": "export"
+    }
+  ],
+  "paths": {
+    "/simulations": {
+      "post": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "createSimulation",
+        "summary": "Create a new simulation draft",
+        "description": "Creates a pending simulation draft. For dataset=nemotron_usa, any unsupported filter key must be rejected with 400 and error.code=UNSUPPORTED_FILTER. Rejection is strict: no partial acceptance and no silent key dropping.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSimulationEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or unsupported filter error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "listSimulations",
+        "summary": "List simulations",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SimulationStatus"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "created_at:desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Simulation history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationListEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}": {
+      "delete": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "deleteSimulation",
+        "summary": "Delete simulation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteSimulationEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/run": {
+      "post": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "runSimulation",
+        "summary": "Start simulation run",
+        "description": "Starts asynchronous inference and returns 202. Clarification loop is optional and non-blocking. If use_refined_prompt=true, refined_policy_text is used when available; otherwise base policy_text is used.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Run accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAcceptedEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/status": {
+      "get": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "getSimulationStatus",
+        "summary": "Get run progress",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationStatusEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/results": {
+      "get": {
+        "tags": [
+          "simulations"
+        ],
+        "operationId": "getSimulationResults",
+        "summary": "Get aggregated results",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Completed results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResultsEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/clarifications/generate": {
+      "post": {
+        "tags": [
+          "clarifications"
+        ],
+        "operationId": "generateClarification",
+        "summary": "Generate next clarification question",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateClarificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Clarification generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClarificationQuestionEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clarifications/{clarification_id}/answer": {
+      "post": {
+        "tags": [
+          "clarifications"
+        ],
+        "operationId": "answerClarification",
+        "summary": "Answer clarification question",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ClarificationIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClarificationAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Clarification answer processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClarificationAnswerEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/clarifications": {
+      "get": {
+        "tags": [
+          "clarifications"
+        ],
+        "operationId": "getClarificationState",
+        "summary": "Get clarification state",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current clarification state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClarificationStateEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/challenge": {
+      "post": {
+        "tags": [
+          "challenge"
+        ],
+        "operationId": "generateChallenge",
+        "summary": "Generate challenge from weak outcomes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Challenge generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/challenges/{challenge_id}/followup": {
+      "post": {
+        "tags": [
+          "challenge"
+        ],
+        "operationId": "submitFollowup",
+        "summary": "Submit followup and get next challenge",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChallengeIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeFollowupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Followup accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeFollowupEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "operationId": "listDatasets",
+        "summary": "List synthetic datasets",
+        "responses": {
+          "200": {
+            "description": "Available datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulations/{id}/export": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "operationId": "exportSimulationCsv",
+        "summary": "Export raw responses as CSV",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SimulationIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV stream",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SimulationIdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ClarificationIdPath": {
+        "name": "clarification_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ChallengeIdPath": {
+        "name": "challenge_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "SimulationStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed"
+        ]
+      },
+      "RuntimeProfile": {
+        "type": "string",
+        "enum": [
+          "interactive",
+          "balanced",
+          "thorough",
+          "auto"
+        ]
+      },
+      "ClarificationStatus": {
+        "type": "string",
+        "enum": [
+          "none",
+          "in_progress",
+          "resolved"
+        ]
+      },
+      "ClarificationQuestionState": {
+        "type": "string",
+        "enum": [
+          "open",
+          "resolved"
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "device_profile": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "ErrorObject": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "null"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorObject"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "FilterSet": {
+        "type": "object",
+        "description": "For dataset=nemotron_usa, supported filter keys are states, age_range, sex, marital_status, education_level, occupation. Unsupported keys income_brackets, household_income, ethnicity must trigger 400 with error.code=UNSUPPORTED_FILTER.",
+        "additionalProperties": false,
+        "properties": {
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "age_range": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "sex": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "marital_status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "education_level": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occupation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateSimulationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "policy_text",
+          "dataset",
+          "sample_size"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "policy_text": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "sample_size": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 2000
+          },
+          "filters": {
+            "$ref": "#/components/schemas/FilterSet"
+          }
+        }
+      },
+      "SimulationDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "policy_text",
+          "status",
+          "dataset",
+          "sample_size",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "policy_text": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SimulationStatus"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "sample_size": {
+            "type": "integer"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/FilterSet"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateSimulationEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimulationDraft"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "RunSimulationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/RuntimeProfile"
+          },
+          "max_duration_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allow_sample_clamp": {
+            "type": "boolean",
+            "default": true
+          },
+          "use_refined_prompt": {
+            "type": "boolean",
+            "default": true,
+            "description": "When true, refined_policy_text is used if available; otherwise policy_text is used."
+          }
+        }
+      },
+      "RunAcceptedData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "started_at",
+          "estimated_seconds",
+          "runtime_profile",
+          "effective_sample_size"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SimulationStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estimated_seconds": {
+            "type": "integer"
+          },
+          "runtime_profile": {
+            "$ref": "#/components/schemas/RuntimeProfile"
+          },
+          "effective_sample_size": {
+            "type": "integer"
+          }
+        }
+      },
+      "RunAcceptedEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunAcceptedData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "SimulationStatusData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "agents_total",
+          "agents_completed",
+          "progress_pct",
+          "estimated_seconds_remaining",
+          "runtime_profile",
+          "effective_sample_size"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SimulationStatus"
+          },
+          "agents_total": {
+            "type": "integer"
+          },
+          "agents_completed": {
+            "type": "integer"
+          },
+          "progress_pct": {
+            "type": "number"
+          },
+          "estimated_seconds_remaining": {
+            "type": "integer"
+          },
+          "runtime_profile": {
+            "$ref": "#/components/schemas/RuntimeProfile"
+          },
+          "effective_sample_size": {
+            "type": "integer"
+          }
+        }
+      },
+      "SimulationStatusEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimulationStatusData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "ApprovalDistribution": {
+        "type": "object",
+        "description": "Map of approval bucket (1-5) to count.",
+        "additionalProperties": {
+          "type": "integer"
+        }
+      },
+      "Summary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mean_approval",
+          "approval_distribution",
+          "dominant_emotion",
+          "behavioral_change_pct"
+        ],
+        "properties": {
+          "mean_approval": {
+            "type": "number"
+          },
+          "approval_distribution": {
+            "$ref": "#/components/schemas/ApprovalDistribution"
+          },
+          "dominant_emotion": {
+            "type": "string"
+          },
+          "behavioral_change_pct": {
+            "type": "number"
+          }
+        }
+      },
+      "RunConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "runtime_profile",
+          "effective_sample_size"
+        ],
+        "properties": {
+          "runtime_profile": {
+            "$ref": "#/components/schemas/RuntimeProfile"
+          },
+          "effective_sample_size": {
+            "type": "integer"
+          }
+        }
+      },
+      "MeanApprovalCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mean_approval",
+          "count"
+        ],
+        "properties": {
+          "mean_approval": {
+            "type": "number"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "DemographicBreakdown": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "by_age_group",
+          "by_marital_status",
+          "by_state",
+          "by_occupation_group"
+        ],
+        "properties": {
+          "by_age_group": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MeanApprovalCount"
+            }
+          },
+          "by_marital_status": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MeanApprovalCount"
+            }
+          },
+          "by_state": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "by_occupation_group": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "EmotionProfile": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number"
+        }
+      },
+      "RepresentativeQuote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "persona_id",
+          "name",
+          "age",
+          "occupation",
+          "city",
+          "state",
+          "approval",
+          "emotion",
+          "rationale"
+        ],
+        "properties": {
+          "persona_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "approval": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "emotion": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          }
+        }
+      },
+      "SimulationResultsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "summary",
+          "run_config",
+          "demographic_breakdown",
+          "emotion_profile",
+          "representative_quotes",
+          "raw_responses_url"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "run_config": {
+            "$ref": "#/components/schemas/RunConfig"
+          },
+          "demographic_breakdown": {
+            "$ref": "#/components/schemas/DemographicBreakdown"
+          },
+          "emotion_profile": {
+            "$ref": "#/components/schemas/EmotionProfile"
+          },
+          "representative_quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepresentativeQuote"
+            }
+          },
+          "raw_responses_url": {
+            "type": "string"
+          }
+        }
+      },
+      "SimulationResultsEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimulationResultsData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "SimulationListItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "status",
+          "sample_size",
+          "mean_approval",
+          "created_at",
+          "completed_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SimulationStatus"
+          },
+          "sample_size": {
+            "type": "integer"
+          },
+          "mean_approval": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SimulationListEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulationListItem"
+            }
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "DeleteSimulationData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "deleted"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DeleteSimulationEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteSimulationData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "GenerateClarificationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "focus"
+        ],
+        "properties": {
+          "focus": {
+            "type": "string"
+          }
+        }
+      },
+      "ClarificationQuestionData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "clarification_id",
+          "simulation_id",
+          "question_text",
+          "rationale",
+          "status",
+          "turn_index"
+        ],
+        "properties": {
+          "clarification_id": {
+            "type": "string"
+          },
+          "simulation_id": {
+            "type": "string"
+          },
+          "question_text": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClarificationQuestionState"
+          },
+          "turn_index": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "ClarificationQuestionEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClarificationQuestionData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "ClarificationAnswerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "simulation_id",
+          "user_response"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string"
+          },
+          "user_response": {
+            "type": "string"
+          }
+        }
+      },
+      "ClarificationAnswerData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "simulation_id",
+          "clarification_status",
+          "refined_policy_text"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string"
+          },
+          "clarification_status": {
+            "$ref": "#/components/schemas/ClarificationStatus"
+          },
+          "refined_policy_text": {
+            "type": "string"
+          },
+          "next_clarification_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "next_question_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ClarificationAnswerEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClarificationAnswerData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "ClarificationStateData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "simulation_id",
+          "clarification_status",
+          "has_open_question",
+          "latest_refined_policy_text"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string"
+          },
+          "clarification_status": {
+            "$ref": "#/components/schemas/ClarificationStatus"
+          },
+          "has_open_question": {
+            "type": "boolean"
+          },
+          "latest_refined_policy_text": {
+            "type": "string"
+          }
+        }
+      },
+      "ClarificationStateEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClarificationStateData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "GenerateChallengeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "focus"
+        ],
+        "properties": {
+          "focus": {
+            "type": "string"
+          }
+        }
+      },
+      "ChallengeEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "segment",
+          "mean_approval",
+          "top_concern"
+        ],
+        "properties": {
+          "segment": {
+            "type": "string"
+          },
+          "mean_approval": {
+            "type": "number"
+          },
+          "top_concern": {
+            "type": "string"
+          }
+        }
+      },
+      "ChallengeData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "challenge_id",
+          "challenge_text",
+          "evidence"
+        ],
+        "properties": {
+          "challenge_id": {
+            "type": "string"
+          },
+          "challenge_text": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/ChallengeEvidence"
+          }
+        }
+      },
+      "ChallengeEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChallengeData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "ChallengeFollowupRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "simulation_id",
+          "user_response"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string"
+          },
+          "user_response": {
+            "type": "string"
+          }
+        }
+      },
+      "ChallengeFollowupData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "followup_text",
+          "suggested_policy_refinement",
+          "next_challenge_id"
+        ],
+        "properties": {
+          "followup_text": {
+            "type": "string"
+          },
+          "suggested_policy_refinement": {
+            "type": "string"
+          },
+          "next_challenge_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ChallengeFollowupEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChallengeFollowupData"
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "DatasetItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "license": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasetsEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetItem"
+            }
+          },
+          "error": {
+            "type": "null"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      }
+    }
+  }
+}

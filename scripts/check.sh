@@ -8,6 +8,12 @@ ran_any=0
 
 echo "[check] starting quality checks"
 
+if [[ -f packages/contracts/scripts/check_contracts.py ]] && command -v python3 >/dev/null 2>&1; then
+  ran_any=1
+  echo "[check] contracts"
+  python3 packages/contracts/scripts/check_contracts.py
+fi
+
 if [[ -f package.json ]] && command -v npm >/dev/null 2>&1; then
   ran_any=1
   echo "[check] npm lint/test (if present)"

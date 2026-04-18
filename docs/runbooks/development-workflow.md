@@ -14,6 +14,13 @@
 4. Any envelope or status enum change requires same-day frontend sync.
 5. Verify async path together: `create -> run -> status polling -> results`.
 
+## Contract Consistency
+- OpenAPI artifact at `packages/contracts/openapi/v1.json` is the canonical source of truth.
+- Backend typed contracts in `packages/contracts/python/contracts_v1.py` are generated output and must not be hand-edited.
+- Regenerate types with `python3 packages/contracts/scripts/generate_python_types.py`.
+- Validate consistency with `python3 packages/contracts/scripts/check_contracts.py`.
+- `./scripts/check.sh` runs the contract consistency check by default.
+
 ## Simulation-Specific Verification
 - Confirm deterministic runs with fixed `sampling_seed`.
 - Validate every agent output against JSON contract.
