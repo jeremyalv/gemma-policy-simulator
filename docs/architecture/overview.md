@@ -5,12 +5,12 @@ SIMS provides rapid, offline policy simulation using large synthetic persona dat
 
 ## System Layers
 1. Presentation Layer (`apps/client`)
-- Policy input (text + presets), simulation history, results dashboard, and challenge/follow-up UX.
+- Policy input (text + presets), pre-run clarification UX, simulation history, and results dashboard.
 - Polling loop for async simulation status and incremental progress.
 
 2. Application Layer (`apps/server`)
 - Simulation service (CRUD + run orchestration + status + results).
-- Challenge service (stateless challenge/follow-up loop).
+- Clarification service (optional multi-turn pre-run prompt refinement).
 - Export service (CSV and report artifacts).
 
 3. Data and Inference Layer (`src/*`, local runtime)
@@ -23,7 +23,7 @@ SIMS provides rapid, offline policy simulation using large synthetic persona dat
 - Parses and validates strict JSON outputs per agent.
 - Aggregates approval, emotion, and rationale signals.
 - Produces demographic cuts and representative quotes.
-- Supports challenge/follow-up loop and future recommendations.
+- Supports optional pre-run clarification loop and future recommendations.
 - Persists run artifacts in local SQLite/JSON storage.
 
 ## API Interaction Model
@@ -38,13 +38,15 @@ SIMS provides rapid, offline policy simulation using large synthetic persona dat
 - Contract changes must land before implementation changes in either app.
 
 ## Request Lifecycle (Run Simulation)
-1. Client triggers `POST /simulations/{id}/run`.
-2. Server samples personas from dataset using filters and seed.
-3. Prompt builder creates one isolated prompt per persona.
-4. Ollama executes batched inference locally.
-5. Aggregator computes summary, segments, emotions, and representative quotes.
-6. Store persists raw and aggregated artifacts.
-7. Client polls `GET /simulations/{id}/status`, then loads `GET /simulations/{id}/results`.
+1. Client creates simulation draft.
+2. Client optionally runs multi-turn clarifications to refine prompt text.
+3. Client triggers `POST /simulations/{id}/run`.
+4. Server samples personas from dataset using filters and seed.
+5. Prompt builder creates one isolated prompt per persona.
+6. Ollama executes batched inference locally.
+7. Aggregator computes summary, segments, emotions, and representative quotes.
+8. Store persists raw and aggregated artifacts.
+9. Client polls `GET /simulations/{id}/status`, then loads `GET /simulations/{id}/results`.
 
 ## Core Principles
 - Local-first inference and data processing.

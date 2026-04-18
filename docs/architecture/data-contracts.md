@@ -36,7 +36,7 @@ Optional fields:
 - `title` (string)
 - `policy_text` (string)
 - `dataset` (string)
-- `sample_size` (integer)
+- `sample_size` (integer, `20-2000`)
 - `filters` (object, optional)
 
 `filters` optional keys:
@@ -48,6 +48,7 @@ Optional fields:
 - `profile` (string, optional): `interactive|balanced|thorough|auto`
 - `max_duration_seconds` (integer, optional)
 - `allow_sample_clamp` (boolean, optional, default `true`)
+- `use_refined_prompt` (boolean, optional, default `true`)
 
 ## Run/Status Metadata Schema
 - `effective_sample_size` (integer)
@@ -62,16 +63,26 @@ Each simulated agent must return valid JSON:
 - `rationale` (string, 2-3 sentences)
 - `behavior_change` (boolean, optional)
 
-## Challenge Loop Schema
-Challenge response:
-- `challenge_id` (string)
-- `challenge_text` (string)
-- `evidence` (object)
+## Clarification Loop Schema
+Clarification question response:
+- `clarification_id` (string)
+- `simulation_id` (string)
+- `question_text` (string)
+- `rationale` (string)
+- `status` (enum: `open|resolved`)
+- `turn_index` (integer)
 
-Follow-up response:
-- `followup_text` (string)
-- `suggested_policy_refinement` (string)
-- `next_challenge_id` (string)
+Clarification answer response:
+- `simulation_id` (string)
+- `clarification_status` (enum: `none|in_progress|resolved`)
+- `refined_policy_text` (string)
+- `next_clarification_id` (string, nullable)
+- `next_question_text` (string, nullable)
+
+Rules:
+- Clarification loop is optional and non-blocking for `/run`.
+- Clarification Q/A transcript is not persisted in simulation history.
+- Only final `refined_policy_text` is persisted.
 
 ## Simulation Metadata Schema
 - `simulation_id` (string)
@@ -86,6 +97,7 @@ Follow-up response:
 - `sampling_seed` (integer, optional)
 - `runtime_profile` (string, optional)
 - `effective_sample_size` (integer, optional)
+- `refined_policy_text` (string, optional)
 
 ## Nemotron Baseline Mapping (Current Split)
 Raw-to-canonical mapping for the currently observed Nemotron columns:

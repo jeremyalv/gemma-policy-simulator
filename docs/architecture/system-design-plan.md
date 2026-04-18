@@ -4,7 +4,7 @@
 - Simulate policy reactions from synthetic populations within seconds to minutes.
 - Run entirely offline using local Ollama + Gemma.
 - Produce traceable, segmented insights for policy decisions.
-- Support iterative policy refinement through challenge/follow-up loops.
+- Support iterative policy refinement through an optional pre-run clarification loop.
 
 ## 2. Non-Goals (V1)
 - Real-time multi-user collaboration.
@@ -13,10 +13,11 @@
 
 ## 3. Functional Requirements
 - Create and store simulation drafts before execution.
+- Support optional multi-turn pre-run clarification to refine policy prompt text.
 - Trigger async simulation runs and expose progress polling.
 - Return full aggregate and segmented results after completion.
 - Persist simulation history and enable CSV export.
-- Generate AI challenges from weak segments and accept follow-ups.
+- Persist only the final refined prompt text, not clarification Q/A history.
 - Support dataset-aware filter/segment capabilities (only enable filters available in the active dataset schema).
 
 ## 4. Quality Attributes
@@ -40,9 +41,9 @@
   - `ollama_client`: batched local generation calls.
   - `response_parser`: strict JSON extraction and validation.
   - `result_aggregator`: summary and segmentation computations.
-- `challenge_engine`
-  - identifies weakest segments and generates policy challenges.
-  - processes user follow-up and suggests refinements.
+- `clarification_engine`
+  - generates optional pre-run clarification questions.
+  - synthesizes refined prompt text from answered clarifications.
 - `storage`
   - `simulation_store`: lifecycle, run metadata, and outputs.
   - `artifact_store`: CSV exports and optional cached summaries.
@@ -54,13 +55,14 @@
 
 ## 7. API Surface (V1)
 - `POST /simulations`
+- `POST /simulations/{id}/clarifications/generate`
+- `POST /clarifications/{clarification_id}/answer`
+- `GET /simulations/{id}/clarifications`
 - `POST /simulations/{id}/run`
 - `GET /simulations/{id}/status`
 - `GET /simulations/{id}/results`
 - `GET /simulations`
 - `DELETE /simulations/{id}`
-- `POST /simulations/{id}/challenge`
-- `POST /challenges/{challenge_id}/followup`
 - `GET /datasets`
 - `GET /simulations/{id}/export`
 
@@ -72,12 +74,12 @@
 
 ## 9. Data Flow
 1. Client creates simulation draft (`POST /simulations`).
-2. Client starts run (`POST /simulations/{id}/run`).
-3. API marks status `running` and invokes simulation engine.
-4. Simulation engine samples personas and performs batched inference.
-5. Parsed outputs are aggregated; status updated to `completed` or `failed`.
-6. Client polls status and fetches full results.
-7. Challenge engine uses results to generate challenge and follow-up prompts.
+2. Client optionally iterates clarifications (`POST /simulations/{id}/clarifications/generate`, `POST /clarifications/{clarification_id}/answer`).
+3. Client starts run (`POST /simulations/{id}/run`) with base or refined prompt.
+4. API marks status `running` and invokes simulation engine.
+5. Simulation engine samples personas and performs batched inference.
+6. Parsed outputs are aggregated; status updated to `completed` or `failed`.
+7. Client polls status and fetches full results.
 
 ## 9.1 Dataset Baseline (Nemotron Current Split)
 Observed structured fields used for filtering/segmentation:
@@ -103,8 +105,8 @@ Adapter rule:
   - max concurrent runs (default `1` on laptops).
 - Server may clamp requested sample size to device-safe limits and must return the effective sample size in status/result metadata.
 - Suggested defaults:
-  - M1 Pro baseline: default `100-200` agents, cap around `300`.
-  - Lower-spec laptops: default `50-100` agents, cap around `150`.
+  - M1 Pro baseline: default `30-100` agents, cap around `300`.
+  - Lower-spec laptops: default `20-100` agents, cap around `150`.
 - Optional two-phase UX:
   - phase 1 quick preview (small sample),
   - phase 2 refine run (larger sample) on user confirmation.
@@ -122,7 +124,8 @@ Adapter rule:
 - SQLite first: zero-setup local persistence for single-machine demo.
 - Format-agnostic dataset adapter: isolates source-schema differences.
 - No per-persona OS threads: batched inference gives isolation with lower overhead.
-- Stateless challenge flow: `challenge_id` carries context, avoiding sticky sessions.
+- Clarification loop is optional and non-blocking: users can skip and run directly.
+- Only final refined prompt text is persisted in simulation history.
 
 ## 13. Capacity and Scaling (POC to V2)
 - V1 default is single-node local deployment.
@@ -138,13 +141,13 @@ Adapter rule:
 - Backend: add device capability probe and runtime profile selection.
 - Frontend: scaffold simulation create/list/status/results pages with mock contract fixtures.
 2. Week 2
-- Backend: add result aggregation, history, and challenge/follow-up endpoints.
-- Frontend: wire real API integration, polling UX, error-state UX, and challenge flow.
+- Backend: add optional pre-run clarification endpoints and refined prompt synthesis.
+- Frontend: wire clarification UX, polling UX, and error-state UX.
 - Integration: run contract compatibility checks on every merged endpoint.
 3. Week 3
 - Backend: add export endpoint and harden retries/error envelopes.
 - Frontend: finalize charts, representative quote explorer, history filtering, and profile selection UI.
-- Integration: end-to-end test `create -> run -> status -> results -> challenge` flow.
+- Integration: end-to-end test `create -> optional clarifications -> run -> status -> results` flow.
 - Integration: benchmark and tune on M1 Pro baseline and one lower-spec profile.
 
 ## 15. Team Topology and Ownership
@@ -163,7 +166,7 @@ Adapter rule:
 ## 17. Component Ownership Map
 | Component | Owner concern | Depends on |
 |---|---|---|
-| `apps/client/*` | UX, charts, polling, challenge UI | REST API + shared contracts |
+| `apps/client/*` | UX, charts, polling, clarification UI | REST API + shared contracts |
 | `apps/server/*` | API lifecycle, validation, orchestration | simulation modules |
 | `src/persona_engine/*` | dataset loading/filtering/sampling | dataset files + adapter |
 | `src/simulation_engine/*` | prompting, inference calls, parsing | Ollama runtime |

@@ -21,7 +21,7 @@ Error responses use standard HTTP status codes and set `data` to `null`:
   "data": null,
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "sample_size must be between 50 and 2000"
+    "message": "sample_size must be between 20 and 2000"
   },
   "meta": {
     "request_id": "req_123"
@@ -85,13 +85,15 @@ Response `201`:
 
 ### POST `/simulations/{id}/run`
 Trigger asynchronous inference for a simulation.
+Runs with refined prompt text when available and `use_refined_prompt=true`.
 
 Request (optional):
 ```json
 {
   "profile": "balanced",
   "max_duration_seconds": 180,
-  "allow_sample_clamp": true
+  "allow_sample_clamp": true,
+  "use_refined_prompt": true
 }
 ```
 
@@ -256,15 +258,18 @@ Response `200`:
 }
 ```
 
-## AI Challenge / Follow-Up
+## Pre-Run Clarification Loop (Optional)
 
-### POST `/simulations/{id}/challenge`
-Generate a challenge based on weak simulation outcomes.
+Clarifications are optional. Users may skip them and run immediately.
+Clarification Q/A is not persisted in simulation history; only final refined prompt text is stored.
+
+### POST `/simulations/{id}/clarifications/generate`
+Generate the next clarification question to improve prompt quality before inference.
 
 Request:
 ```json
 {
-  "focus": "low_income_opposition"
+  "focus": "policy_scope"
 }
 ```
 
@@ -272,13 +277,12 @@ Response `200`:
 ```json
 {
   "data": {
-    "challenge_id": "ch_xyz789",
-    "challenge_text": "Low-income households in TX show the lowest approval (2.1/5). Your policy doesn't mention relief mechanisms. How would you address this?",
-    "evidence": {
-      "segment": "low_income",
-      "mean_approval": 2.1,
-      "top_concern": "heating costs"
-    }
+    "clarification_id": "cl_001",
+    "simulation_id": "sim_abc123",
+    "question_text": "Who specifically receives the carbon tax rebate, and how is eligibility determined?",
+    "rationale": "Targeting rules materially affect acceptance across demographic segments.",
+    "status": "open",
+    "turn_index": 1
   },
   "error": null,
   "meta": {
@@ -287,14 +291,14 @@ Response `200`:
 }
 ```
 
-### POST `/challenges/{challenge_id}/followup`
-Submit policymaker response and receive next challenge.
+### POST `/clarifications/{clarification_id}/answer`
+Submit user answer and receive updated refined prompt plus optional next question.
 
 Request:
 ```json
 {
   "simulation_id": "sim_abc123",
-  "user_response": "We plan to include a monthly rebate cheque of $100 for households below the poverty line."
+  "user_response": "Rebates apply to households under 150% of poverty line, paid monthly."
 }
 ```
 
@@ -302,13 +306,34 @@ Response `200`:
 ```json
 {
   "data": {
-    "followup_text": "A flat $100 rebate may not offset costs in cold-climate states. Rural TX households spend about $180 per month on heating. Would you consider a tiered rebate instead?",
-    "suggested_policy_refinement": "Consider income-graduated rebates scaled to average regional energy costs.",
-    "next_challenge_id": "ch_xyz790"
+    "simulation_id": "sim_abc123",
+    "clarification_status": "in_progress",
+    "refined_policy_text": "A federal carbon tax of $50 per tonne of CO2 with monthly rebates for households below 150% of poverty line...",
+    "next_clarification_id": "cl_002",
+    "next_question_text": "Should rebate amounts vary by regional energy costs?"
   },
   "error": null,
   "meta": {
     "request_id": "req_008"
+  }
+}
+```
+
+### GET `/simulations/{id}/clarifications`
+Fetch current clarification state for the draft simulation.
+
+Response `200`:
+```json
+{
+  "data": {
+    "simulation_id": "sim_abc123",
+    "clarification_status": "in_progress",
+    "has_open_question": true,
+    "latest_refined_policy_text": "A federal carbon tax of $50 per tonne of CO2 with monthly rebates..."
+  },
+  "error": null,
+  "meta": {
+    "request_id": "req_010"
   }
 }
 ```
@@ -374,7 +399,7 @@ Response: `200` with `Content-Type: text/csv` stream.
 - `500` internal or inference runtime failure
 
 ## Validation and Idempotency
-- `sample_size` must be `50-2000` for V1 stability.
+- `sample_size` must be `20-2000` for V1 stability.
 - `age_range` must satisfy `min <= max`.
 - `dataset` must exist in `GET /datasets`.
 - `POST /simulations` supports optional `Idempotency-Key` header.
@@ -385,7 +410,8 @@ Response: `200` with `Content-Type: text/csv` stream.
 ## System Design Notes
 - Async run pattern: `POST /run` returns `202`; frontend polls `/status` every 2-3 seconds.
 - Create/run separation: supports draft/review workflows before expensive inference.
-- Challenge loop is stateless: each `challenge_id` carries enough context to continue.
+- Clarification loop is optional and multi-turn: user may skip and run directly.
+- Clarification Q/A is ephemeral; only final refined prompt text is persisted.
 - Runtime profiles (`interactive|balanced|thorough|auto`) enable M1/lower-spec friendly execution.
 
 ## Client/Server Integration Notes

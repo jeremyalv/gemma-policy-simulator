@@ -4,7 +4,7 @@
 `gemma-policy-simulator` (SIMS) is a local-first synthetic multi-agent policy simulator. The system helps policymakers test policy variants against census-aligned synthetic personas before real-world rollout.
 
 ## Repo Map
-- `apps/client/`: frontend application (UI, polling, visualization, challenge flow).
+- `apps/client/`: frontend application (UI, polling, visualization, pre-run clarification flow).
 - `apps/server/`: backend application (API, simulation orchestration, storage).
 - `packages/contracts/`: shared API schemas and generated types.
 - `src/persona_engine/`: dataset loading, schema adapters, and persona sampling.

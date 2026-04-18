@@ -5,7 +5,7 @@ Backend API and simulation runtime owned by the backend track.
 Responsibilities:
 - Simulation lifecycle endpoints and validation.
 - Persona sampling and Ollama orchestration.
-- Aggregation, storage, export, and challenge generation.
+- Aggregation, storage, export, and pre-run clarification generation.
 - API responses in `{ data, error, meta }` envelope.
 
 Integration contract source:
