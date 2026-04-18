@@ -1,0 +1,3 @@
+src/auth/
+src/persistence/
+infra/migrations/
