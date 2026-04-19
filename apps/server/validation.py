@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any, Mapping, cast
 
-from packages.contracts.python.contracts_v1 import CreateSimulationRequest, FilterSet, GenerateClarificationRequest
+from packages.contracts.python.contracts_v1 import (
+    ClarificationAnswerRequest,
+    CreateSimulationRequest,
+    FilterSet,
+    GenerateClarificationRequest,
+)
 
 from .errors import ApiError
 
@@ -119,6 +124,27 @@ def validate_generate_clarification_payload(payload: Any) -> GenerateClarificati
         raise ApiError("VALIDATION_ERROR", "focus is required and must be a non-empty string")
 
     return cast(GenerateClarificationRequest, {"focus": focus.strip()})
+
+
+def validate_answer_clarification_payload(payload: Any) -> ClarificationAnswerRequest:
+    if not isinstance(payload, dict):
+        raise ApiError("VALIDATION_ERROR", "request body must be a JSON object")
+
+    simulation_id = payload.get("simulation_id")
+    user_response = payload.get("user_response")
+
+    if not isinstance(simulation_id, str) or not simulation_id.strip():
+        raise ApiError("VALIDATION_ERROR", "simulation_id is required and must be a non-empty string")
+    if not isinstance(user_response, str) or not user_response.strip():
+        raise ApiError("VALIDATION_ERROR", "user_response is required and must be a non-empty string")
+
+    return cast(
+        ClarificationAnswerRequest,
+        {
+            "simulation_id": simulation_id.strip(),
+            "user_response": user_response.strip(),
+        },
+    )
 
 
 def _parse_positive_int(name: str, value: str, *, minimum: int, maximum: int | None = None) -> int:

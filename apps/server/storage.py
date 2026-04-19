@@ -201,3 +201,28 @@ class SimulationStore:
                     simulation_id,
                 ),
             )
+
+    def update_refined_prompt_and_clarification_state(
+        self,
+        *,
+        simulation_id: str,
+        refined_policy_text: str,
+        clarification_status: str,
+        clarification_turn_index: int,
+        current_clarification_id: str | None,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE simulations
+                SET refined_policy_text = ?, clarification_status = ?, clarification_turn_index = ?, current_clarification_id = ?
+                WHERE id = ?
+                """,
+                (
+                    refined_policy_text,
+                    clarification_status,
+                    clarification_turn_index,
+                    current_clarification_id,
+                    simulation_id,
+                ),
+            )

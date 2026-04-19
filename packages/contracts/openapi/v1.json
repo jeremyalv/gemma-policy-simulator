@@ -344,6 +344,7 @@
         ],
         "operationId": "answerClarification",
         "summary": "Answer clarification question",
+        "description": "Processes clarification answer via local Gemma runtime, updates refined policy text, and optionally opens the next clarification turn. Clarification flow is pending-only with a hard max of 3 turns.",
         "parameters": [
           {
             "$ref": "#/components/parameters/ClarificationIdPath"
@@ -366,6 +367,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClarificationAnswerEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation or active clarification not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lifecycle conflict for non-pending simulation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Gemma/Ollama runtime failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }

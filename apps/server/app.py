@@ -13,6 +13,7 @@ from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
 from .errors import ApiError
 from .service import (
+    answer_clarification_question,
     create_simulation_draft,
     delete_simulation,
     generate_clarification_question,
@@ -21,6 +22,7 @@ from .service import (
 )
 from .storage import SimulationStore
 from .validation import (
+    validate_answer_clarification_payload,
     validate_create_simulation_payload,
     validate_generate_clarification_payload,
     validate_list_simulations_query,
@@ -115,6 +117,25 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             response = generate_clarification_question(
                 store=store,
                 simulation_id=simulation_id,
+                request_body=validated,
+            )
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
+
+    @app.post("/api/v1/clarifications/{clarification_id}/answer", status_code=200)
+    async def post_answer_clarification(clarification_id: str, request: Request) -> Any:
+        try:
+            payload = await request.json()
+        except Exception:
+            return error_envelope(400, "VALIDATION_ERROR", "request body must be valid JSON")
+
+        try:
+            validated = validate_answer_clarification_payload(payload)
+            response = answer_clarification_question(
+                store=store,
+                clarification_id=clarification_id,
                 request_body=validated,
             )
         except ApiError as exc:

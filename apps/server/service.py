@@ -7,6 +7,8 @@ from typing import Any, cast
 from uuid import uuid4
 
 from packages.contracts.python.contracts_v1 import (
+    ClarificationAnswerEnvelope,
+    ClarificationAnswerRequest,
     ClarificationQuestionEnvelope,
     CreateSimulationEnvelope,
     CreateSimulationRequest,
@@ -17,9 +19,15 @@ from packages.contracts.python.contracts_v1 import (
     SimulationListItem,
 )
 
-from .clarification_generator import ClarificationGenerationError, generate_clarification_with_gemma
+from .clarification_generator import (
+    ClarificationGenerationError,
+    generate_clarification_answer_with_gemma,
+    generate_clarification_with_gemma,
+)
 from .errors import ApiError
 from .storage import SimulationStore
+
+MAX_CLARIFICATION_TURNS = 3
 
 
 def new_simulation_id() -> str:
@@ -187,6 +195,100 @@ def generate_clarification_question(
                 "rationale": rationale,
                 "status": "open",
                 "turn_index": turn_index,
+            },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def answer_clarification_question(
+    store: SimulationStore,
+    clarification_id: str,
+    request_body: ClarificationAnswerRequest,
+) -> ClarificationAnswerEnvelope:
+    simulation_id = request_body["simulation_id"]
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    if simulation["status"] != "pending":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message="clarification answers are only allowed for pending simulations",
+            status_code=409,
+        )
+
+    current_clarification_id = simulation.get("current_clarification_id")
+    if not current_clarification_id or current_clarification_id != clarification_id:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"clarification not found: {clarification_id}",
+            status_code=404,
+        )
+
+    current_turn_index = int(simulation.get("clarification_turn_index") or 0)
+
+    try:
+        refined_policy_text, model_status, next_question_text = generate_clarification_answer_with_gemma(
+            policy_text=simulation["policy_text"],
+            refined_policy_text=simulation.get("refined_policy_text"),
+            clarification_id=clarification_id,
+            turn_index=current_turn_index,
+            user_response=request_body["user_response"],
+        )
+    except ClarificationGenerationError as exc:
+        raise ApiError(
+            code="MODEL_RUNTIME_ERROR",
+            message=exc.message,
+            status_code=500,
+        ) from exc
+
+    final_status = model_status
+    if current_turn_index >= MAX_CLARIFICATION_TURNS:
+        final_status = "resolved"
+
+    next_clarification_id: str | None = None
+    response_next_question_text: str | None = None
+    persisted_turn_index = current_turn_index
+    persisted_current_clarification_id: str | None = None
+
+    if final_status == "in_progress":
+        if current_turn_index >= MAX_CLARIFICATION_TURNS:
+            final_status = "resolved"
+        else:
+            if next_question_text is None:
+                raise ApiError(
+                    code="MODEL_RUNTIME_ERROR",
+                    message="model output missing next_question_text for in_progress clarification",
+                    status_code=500,
+                )
+            next_clarification_id = new_clarification_id()
+            response_next_question_text = next_question_text
+            persisted_turn_index = current_turn_index + 1
+            persisted_current_clarification_id = next_clarification_id
+
+    store.update_refined_prompt_and_clarification_state(
+        simulation_id=simulation_id,
+        refined_policy_text=refined_policy_text,
+        clarification_status=final_status,
+        clarification_turn_index=persisted_turn_index,
+        current_clarification_id=persisted_current_clarification_id,
+    )
+
+    return cast(
+        ClarificationAnswerEnvelope,
+        {
+            "data": {
+                "simulation_id": simulation_id,
+                "clarification_status": final_status,
+                "refined_policy_text": refined_policy_text,
+                "next_clarification_id": next_clarification_id,
+                "next_question_text": response_next_question_text,
             },
             "error": None,
             "meta": {"request_id": new_request_id()},

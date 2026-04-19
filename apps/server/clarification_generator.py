@@ -41,38 +41,35 @@ def _build_prompt(policy_text: str, focus: str) -> str:
     )
 
 
-def _parse_model_response(response_body: bytes) -> tuple[str, str]:
-    try:
-        payload = json.loads(response_body)
-    except json.JSONDecodeError as exc:
-        raise ClarificationGenerationError("model response was not valid JSON") from exc
-
-    raw_content = payload.get("response")
-    if not isinstance(raw_content, str):
-        raise ClarificationGenerationError("model response did not contain response text")
-
-    try:
-        generated = json.loads(raw_content)
-    except json.JSONDecodeError as exc:
-        raise ClarificationGenerationError("model output was not valid JSON") from exc
-
-    if not isinstance(generated, dict):
-        raise ClarificationGenerationError("model output must be a JSON object")
-
-    question_text = generated.get("question_text")
-    rationale = generated.get("rationale")
-    if not isinstance(question_text, str) or not question_text.strip():
-        raise ClarificationGenerationError("model output missing non-empty question_text")
-    if not isinstance(rationale, str) or not rationale.strip():
-        raise ClarificationGenerationError("model output missing non-empty rationale")
-
-    return question_text.strip(), rationale.strip()
+def _build_answer_prompt(
+    *,
+    policy_text: str,
+    refined_policy_text: str | None,
+    clarification_id: str,
+    turn_index: int,
+    user_response: str,
+) -> str:
+    prior_refined = refined_policy_text or ""
+    return (
+        "You are helping refine a public policy simulation prompt.\n"
+        "Given the base policy text, current refined text (if any), and user answer, update the refined policy text.\n"
+        "Then decide if another clarification is needed.\n"
+        "Return strictly valid JSON with exactly these keys:\n"
+        "- refined_policy_text (string)\n"
+        "- clarification_status (string: in_progress or resolved)\n"
+        "- next_question_text (string or null; required when clarification_status is in_progress)\n\n"
+        f"Current clarification_id: {clarification_id}\n"
+        f"Current turn_index: {turn_index}\n"
+        f"Base policy text:\n{policy_text}\n\n"
+        f"Current refined policy text:\n{prior_refined}\n\n"
+        f"User answer:\n{user_response}\n"
+    )
 
 
-def generate_clarification_with_gemma(policy_text: str, focus: str) -> tuple[str, str]:
+def _call_ollama(prompt: str) -> dict[str, Any]:
     body: dict[str, Any] = {
         "model": _clarification_model(),
-        "prompt": _build_prompt(policy_text=policy_text, focus=focus),
+        "prompt": prompt,
         "format": "json",
         "stream": False,
     }
@@ -93,4 +90,72 @@ def generate_clarification_with_gemma(policy_text: str, focus: str) -> tuple[str
     except Exception as exc:
         raise ClarificationGenerationError("unexpected model runtime error") from exc
 
-    return _parse_model_response(response_body)
+    try:
+        payload = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise ClarificationGenerationError("model response was not valid JSON") from exc
+
+    raw_content = payload.get("response")
+    if not isinstance(raw_content, str):
+        raise ClarificationGenerationError("model response did not contain response text")
+
+    try:
+        generated = json.loads(raw_content)
+    except json.JSONDecodeError as exc:
+        raise ClarificationGenerationError("model output was not valid JSON") from exc
+
+    if not isinstance(generated, dict):
+        raise ClarificationGenerationError("model output must be a JSON object")
+
+    return generated
+
+
+def _parse_question_output(generated: dict[str, Any]) -> tuple[str, str]:
+    question_text = generated.get("question_text")
+    rationale = generated.get("rationale")
+    if not isinstance(question_text, str) or not question_text.strip():
+        raise ClarificationGenerationError("model output missing non-empty question_text")
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise ClarificationGenerationError("model output missing non-empty rationale")
+
+    return question_text.strip(), rationale.strip()
+
+
+def _parse_answer_output(generated: dict[str, Any]) -> tuple[str, str, str | None]:
+    refined_policy_text = generated.get("refined_policy_text")
+    clarification_status = generated.get("clarification_status")
+    next_question_text = generated.get("next_question_text")
+
+    if not isinstance(refined_policy_text, str) or not refined_policy_text.strip():
+        raise ClarificationGenerationError("model output missing non-empty refined_policy_text")
+    if clarification_status not in {"in_progress", "resolved"}:
+        raise ClarificationGenerationError("model output clarification_status must be in_progress or resolved")
+    if next_question_text is not None and (not isinstance(next_question_text, str) or not next_question_text.strip()):
+        raise ClarificationGenerationError("model output next_question_text must be non-empty string or null")
+
+    return refined_policy_text.strip(), clarification_status, next_question_text.strip() if isinstance(next_question_text, str) else None
+
+
+def generate_clarification_with_gemma(policy_text: str, focus: str) -> tuple[str, str]:
+    generated = _call_ollama(_build_prompt(policy_text=policy_text, focus=focus))
+    return _parse_question_output(generated)
+
+
+def generate_clarification_answer_with_gemma(
+    *,
+    policy_text: str,
+    refined_policy_text: str | None,
+    clarification_id: str,
+    turn_index: int,
+    user_response: str,
+) -> tuple[str, str, str | None]:
+    generated = _call_ollama(
+        _build_answer_prompt(
+            policy_text=policy_text,
+            refined_policy_text=refined_policy_text,
+            clarification_id=clarification_id,
+            turn_index=turn_index,
+            user_response=user_response,
+        )
+    )
+    return _parse_answer_output(generated)
