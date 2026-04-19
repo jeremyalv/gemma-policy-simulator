@@ -436,6 +436,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Simulation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       }

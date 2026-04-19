@@ -10,6 +10,7 @@ from packages.contracts.python.contracts_v1 import (
     ClarificationAnswerEnvelope,
     ClarificationAnswerRequest,
     ClarificationQuestionEnvelope,
+    ClarificationStateEnvelope,
     CreateSimulationEnvelope,
     CreateSimulationRequest,
     DeleteSimulationEnvelope,
@@ -289,6 +290,36 @@ def answer_clarification_question(
                 "refined_policy_text": refined_policy_text,
                 "next_clarification_id": next_clarification_id,
                 "next_question_text": response_next_question_text,
+            },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def get_clarification_state(store: SimulationStore, simulation_id: str) -> ClarificationStateEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    clarification_status = cast(str, simulation.get("clarification_status") or "none")
+    current_clarification_id = simulation.get("current_clarification_id")
+    refined_policy_text = simulation.get("refined_policy_text")
+    latest_refined_policy_text = refined_policy_text if isinstance(refined_policy_text, str) and refined_policy_text.strip() else simulation["policy_text"]
+    has_open_question = clarification_status == "in_progress" and bool(current_clarification_id)
+
+    return cast(
+        ClarificationStateEnvelope,
+        {
+            "data": {
+                "simulation_id": simulation_id,
+                "clarification_status": clarification_status,
+                "has_open_question": has_open_question,
+                "latest_refined_policy_text": latest_refined_policy_text,
             },
             "error": None,
             "meta": {"request_id": new_request_id()},
