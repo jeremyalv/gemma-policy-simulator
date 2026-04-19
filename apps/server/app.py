@@ -20,6 +20,7 @@ from .service import (
     get_clarification_state,
     list_simulation_history,
     new_request_id,
+    run_simulation,
 )
 from .storage import SimulationStore
 from .validation import (
@@ -27,6 +28,7 @@ from .validation import (
     validate_create_simulation_payload,
     validate_generate_clarification_payload,
     validate_list_simulations_query,
+    validate_run_simulation_payload,
 )
 
 
@@ -124,6 +126,34 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
         return JSONResponse(status_code=200, content=response)
+
+    @app.post("/api/v1/simulations/{simulation_id}/run", status_code=202)
+    async def post_run_simulation(simulation_id: str, request: Request) -> Any:
+        raw_body = await request.body()
+        if not raw_body:
+            payload: Any = {}
+        else:
+            try:
+                payload = await request.json()
+            except Exception:
+                return error_envelope(400, "VALIDATION_ERROR", "request body must be valid JSON")
+
+        idempotency_key = request.headers.get("Idempotency-Key")
+        if idempotency_key is not None:
+            idempotency_key = idempotency_key.strip() or None
+
+        try:
+            validated = validate_run_simulation_payload(payload)
+            response = run_simulation(
+                store=store,
+                simulation_id=simulation_id,
+                request_body=validated,
+                idempotency_key=idempotency_key,
+            )
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=202, content=response)
 
     @app.post("/api/v1/clarifications/{clarification_id}/answer", status_code=200)
     async def post_answer_clarification(clarification_id: str, request: Request) -> Any:

@@ -37,6 +37,13 @@ class SimulationStore:
                     completed_at TEXT,
                     mean_approval REAL,
                     refined_policy_text TEXT,
+                    started_at TEXT,
+                    runtime_profile TEXT,
+                    effective_sample_size INTEGER,
+                    estimated_seconds INTEGER,
+                    run_idempotency_key TEXT,
+                    run_request_fingerprint TEXT,
+                    run_prompt_source TEXT,
                     clarification_status TEXT NOT NULL DEFAULT 'none',
                     clarification_turn_index INTEGER NOT NULL DEFAULT 0,
                     current_clarification_id TEXT
@@ -51,6 +58,20 @@ class SimulationStore:
                 conn.execute("ALTER TABLE simulations ADD COLUMN completed_at TEXT")
             if "mean_approval" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN mean_approval REAL")
+            if "started_at" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN started_at TEXT")
+            if "runtime_profile" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN runtime_profile TEXT")
+            if "effective_sample_size" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN effective_sample_size INTEGER")
+            if "estimated_seconds" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN estimated_seconds INTEGER")
+            if "run_idempotency_key" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_idempotency_key TEXT")
+            if "run_request_fingerprint" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_request_fingerprint TEXT")
+            if "run_prompt_source" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_prompt_source TEXT")
             if "clarification_status" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN clarification_status TEXT NOT NULL DEFAULT 'none'")
             if "clarification_turn_index" not in existing_columns:
@@ -115,6 +136,13 @@ class SimulationStore:
             "completed_at": row["completed_at"],
             "mean_approval": row["mean_approval"],
             "refined_policy_text": row["refined_policy_text"],
+            "started_at": row["started_at"],
+            "runtime_profile": row["runtime_profile"],
+            "effective_sample_size": row["effective_sample_size"],
+            "estimated_seconds": row["estimated_seconds"],
+            "run_idempotency_key": row["run_idempotency_key"],
+            "run_request_fingerprint": row["run_request_fingerprint"],
+            "run_prompt_source": row["run_prompt_source"],
             "clarification_status": row["clarification_status"],
             "clarification_turn_index": row["clarification_turn_index"],
             "current_clarification_id": row["current_clarification_id"],
@@ -226,3 +254,43 @@ class SimulationStore:
                     simulation_id,
                 ),
             )
+
+    def start_simulation_run(
+        self,
+        *,
+        simulation_id: str,
+        started_at: str,
+        runtime_profile: str,
+        effective_sample_size: int,
+        estimated_seconds: int,
+        run_idempotency_key: str | None,
+        run_request_fingerprint: str,
+        run_prompt_source: str,
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE simulations
+                SET
+                    status = 'running',
+                    started_at = ?,
+                    runtime_profile = ?,
+                    effective_sample_size = ?,
+                    estimated_seconds = ?,
+                    run_idempotency_key = ?,
+                    run_request_fingerprint = ?,
+                    run_prompt_source = ?
+                WHERE id = ? AND status = 'pending'
+                """,
+                (
+                    started_at,
+                    runtime_profile,
+                    effective_sample_size,
+                    estimated_seconds,
+                    run_idempotency_key,
+                    run_request_fingerprint,
+                    run_prompt_source,
+                    simulation_id,
+                ),
+            )
+            return int(cursor.rowcount)

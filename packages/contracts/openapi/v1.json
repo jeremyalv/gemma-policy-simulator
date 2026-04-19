@@ -195,6 +195,26 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid run request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "409": {
             "description": "Lifecycle conflict",
             "content": {

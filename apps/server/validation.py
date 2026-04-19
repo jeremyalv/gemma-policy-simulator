@@ -9,6 +9,7 @@ from packages.contracts.python.contracts_v1 import (
     CreateSimulationRequest,
     FilterSet,
     GenerateClarificationRequest,
+    RunSimulationRequest,
 )
 
 from .errors import ApiError
@@ -20,6 +21,7 @@ DEFAULT_SORT = "created_at:desc"
 DEFAULT_PAGE = 1
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
+ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
 SUPPORTED_FILTER_KEYS = {
     "states",
     "age_range",
@@ -145,6 +147,48 @@ def validate_answer_clarification_payload(payload: Any) -> ClarificationAnswerRe
             "user_response": user_response.strip(),
         },
     )
+
+
+def validate_run_simulation_payload(payload: Any) -> RunSimulationRequest:
+    if payload is None:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        raise ApiError("VALIDATION_ERROR", "request body must be a JSON object")
+
+    allowed_keys = {"profile", "max_duration_seconds", "allow_sample_clamp", "use_refined_prompt"}
+    extra_keys = sorted(set(payload.keys()) - allowed_keys)
+    if extra_keys:
+        raise ApiError("VALIDATION_ERROR", f"unexpected field(s): {', '.join(extra_keys)}")
+
+    profile = payload.get("profile", "auto")
+    if not isinstance(profile, str) or profile not in ALLOWED_RUNTIME_PROFILES:
+        raise ApiError("VALIDATION_ERROR", "profile must be one of interactive|balanced|thorough|auto")
+
+    max_duration_seconds = payload.get("max_duration_seconds")
+    if max_duration_seconds is not None:
+        if isinstance(max_duration_seconds, bool) or not isinstance(max_duration_seconds, int):
+            raise ApiError("VALIDATION_ERROR", "max_duration_seconds must be an integer")
+        if max_duration_seconds < 1:
+            raise ApiError("VALIDATION_ERROR", "max_duration_seconds must be >= 1")
+
+    allow_sample_clamp = payload.get("allow_sample_clamp", True)
+    if not isinstance(allow_sample_clamp, bool):
+        raise ApiError("VALIDATION_ERROR", "allow_sample_clamp must be a boolean")
+
+    use_refined_prompt = payload.get("use_refined_prompt", True)
+    if not isinstance(use_refined_prompt, bool):
+        raise ApiError("VALIDATION_ERROR", "use_refined_prompt must be a boolean")
+
+    normalized: dict[str, Any] = {
+        "profile": profile,
+        "allow_sample_clamp": allow_sample_clamp,
+        "use_refined_prompt": use_refined_prompt,
+    }
+    if max_duration_seconds is not None:
+        normalized["max_duration_seconds"] = max_duration_seconds
+
+    return cast(RunSimulationRequest, normalized)
 
 
 def _parse_positive_int(name: str, value: str, *, minimum: int, maximum: int | None = None) -> int:

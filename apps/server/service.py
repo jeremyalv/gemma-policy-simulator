@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import Any, cast
 from uuid import uuid4
@@ -15,6 +17,8 @@ from packages.contracts.python.contracts_v1 import (
     CreateSimulationRequest,
     DeleteSimulationEnvelope,
     GenerateClarificationRequest,
+    RunAcceptedEnvelope,
+    RunSimulationRequest,
     SimulationDraft,
     SimulationListEnvelope,
     SimulationListItem,
@@ -45,6 +49,55 @@ def new_clarification_id() -> str:
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _estimate_seconds(effective_sample_size: int, runtime_profile: str) -> int:
+    # Deterministic baseline heuristic for run acceptance metadata.
+    multiplier_by_profile = {
+        "interactive": 0.25,
+        "balanced": 0.42,
+        "thorough": 0.7,
+        "auto": 0.5,
+    }
+    multiplier = multiplier_by_profile.get(runtime_profile, 0.5)
+    return max(5, int(round(effective_sample_size * multiplier)))
+
+
+def _run_request_fingerprint(simulation_id: str, request_body: RunSimulationRequest) -> str:
+    normalized = {
+        "simulation_id": simulation_id,
+        "profile": request_body.get("profile", "auto"),
+        "max_duration_seconds": request_body.get("max_duration_seconds"),
+        "allow_sample_clamp": request_body.get("allow_sample_clamp", True),
+        "use_refined_prompt": request_body.get("use_refined_prompt", True),
+    }
+    canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _run_accepted_envelope(
+    *,
+    simulation_id: str,
+    started_at: str,
+    runtime_profile: str,
+    estimated_seconds: int,
+    effective_sample_size: int,
+) -> RunAcceptedEnvelope:
+    return cast(
+        RunAcceptedEnvelope,
+        {
+            "data": {
+                "id": simulation_id,
+                "status": "running",
+                "started_at": started_at,
+                "estimated_seconds": estimated_seconds,
+                "runtime_profile": runtime_profile,
+                "effective_sample_size": effective_sample_size,
+            },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
 
 
 def create_simulation_draft(store: SimulationStore, request_body: CreateSimulationRequest) -> CreateSimulationEnvelope:
@@ -324,4 +377,100 @@ def get_clarification_state(store: SimulationStore, simulation_id: str) -> Clari
             "error": None,
             "meta": {"request_id": new_request_id()},
         },
+    )
+
+
+def run_simulation(
+    store: SimulationStore,
+    simulation_id: str,
+    request_body: RunSimulationRequest,
+    idempotency_key: str | None,
+) -> RunAcceptedEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    fingerprint = _run_request_fingerprint(simulation_id, request_body)
+    status = simulation["status"]
+
+    if status == "running":
+        persisted_key = simulation.get("run_idempotency_key")
+        persisted_fingerprint = simulation.get("run_request_fingerprint")
+
+        if idempotency_key and persisted_key == idempotency_key:
+            if persisted_fingerprint == fingerprint:
+                started_at = cast(str | None, simulation.get("started_at"))
+                runtime_profile = cast(str | None, simulation.get("runtime_profile"))
+                estimated_seconds = simulation.get("estimated_seconds")
+                effective_sample_size = simulation.get("effective_sample_size")
+
+                if (
+                    isinstance(started_at, str)
+                    and isinstance(runtime_profile, str)
+                    and isinstance(estimated_seconds, int)
+                    and isinstance(effective_sample_size, int)
+                ):
+                    return _run_accepted_envelope(
+                        simulation_id=simulation_id,
+                        started_at=started_at,
+                        runtime_profile=runtime_profile,
+                        estimated_seconds=estimated_seconds,
+                        effective_sample_size=effective_sample_size,
+                    )
+
+            raise ApiError(
+                code="LIFECYCLE_CONFLICT",
+                message="simulation is already running with a different request",
+                status_code=409,
+            )
+
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message="simulation is already running",
+            status_code=409,
+        )
+
+    if status != "pending":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message=f"simulation cannot be started from status: {status}",
+            status_code=409,
+        )
+
+    runtime_profile = cast(str, request_body.get("profile", "auto"))
+    effective_sample_size = int(simulation["sample_size"])
+    estimated_seconds = _estimate_seconds(effective_sample_size, runtime_profile)
+    started_at = utc_now_iso()
+
+    use_refined_prompt = cast(bool, request_body.get("use_refined_prompt", True))
+    has_refined = isinstance(simulation.get("refined_policy_text"), str) and bool(cast(str, simulation["refined_policy_text"]).strip())
+    run_prompt_source = "refined_policy_text" if use_refined_prompt and has_refined else "policy_text"
+
+    updated_rows = store.start_simulation_run(
+        simulation_id=simulation_id,
+        started_at=started_at,
+        runtime_profile=runtime_profile,
+        effective_sample_size=effective_sample_size,
+        estimated_seconds=estimated_seconds,
+        run_idempotency_key=idempotency_key,
+        run_request_fingerprint=fingerprint,
+        run_prompt_source=run_prompt_source,
+    )
+    if updated_rows == 0:
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message="simulation status changed before run start",
+            status_code=409,
+        )
+
+    return _run_accepted_envelope(
+        simulation_id=simulation_id,
+        started_at=started_at,
+        runtime_profile=runtime_profile,
+        estimated_seconds=estimated_seconds,
+        effective_sample_size=effective_sample_size,
     )
