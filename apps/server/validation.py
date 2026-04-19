@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, cast
 
-from packages.contracts.python.contracts_v1 import CreateSimulationRequest, FilterSet
+from packages.contracts.python.contracts_v1 import CreateSimulationRequest, FilterSet, GenerateClarificationRequest
 
 from .errors import ApiError
 
@@ -108,6 +108,17 @@ def validate_create_simulation_payload(payload: Any) -> CreateSimulationRequest:
         request["filters"] = filters
 
     return cast(CreateSimulationRequest, request)
+
+
+def validate_generate_clarification_payload(payload: Any) -> GenerateClarificationRequest:
+    if not isinstance(payload, dict):
+        raise ApiError("VALIDATION_ERROR", "request body must be a JSON object")
+
+    focus = payload.get("focus")
+    if not isinstance(focus, str) or not focus.strip():
+        raise ApiError("VALIDATION_ERROR", "focus is required and must be a non-empty string")
+
+    return cast(GenerateClarificationRequest, {"focus": focus.strip()})
 
 
 def _parse_positive_int(name: str, value: str, *, minimum: int, maximum: int | None = None) -> int:

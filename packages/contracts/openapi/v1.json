@@ -267,6 +267,7 @@
         ],
         "operationId": "generateClarification",
         "summary": "Generate next clarification question",
+        "description": "Generates one clarification question via local Gemma runtime. Clarification generation is draft-only and does not change simulation lifecycle status.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SimulationIdPath"
@@ -289,6 +290,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClarificationQuestionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lifecycle conflict for non-pending simulation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Gemma/Ollama runtime failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }

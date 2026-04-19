@@ -15,11 +15,16 @@ from .errors import ApiError
 from .service import (
     create_simulation_draft,
     delete_simulation,
+    generate_clarification_question,
     list_simulation_history,
     new_request_id,
 )
 from .storage import SimulationStore
-from .validation import validate_create_simulation_payload, validate_list_simulations_query
+from .validation import (
+    validate_create_simulation_payload,
+    validate_generate_clarification_payload,
+    validate_list_simulations_query,
+)
 
 
 def default_db_path() -> Path:
@@ -93,6 +98,25 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     async def delete_simulation_by_id(simulation_id: str) -> Any:
         try:
             response = delete_simulation(store, simulation_id)
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
+
+    @app.post("/api/v1/simulations/{simulation_id}/clarifications/generate", status_code=200)
+    async def post_generate_clarification(simulation_id: str, request: Request) -> Any:
+        try:
+            payload = await request.json()
+        except Exception:
+            return error_envelope(400, "VALIDATION_ERROR", "request body must be valid JSON")
+
+        try:
+            validated = validate_generate_clarification_payload(payload)
+            response = generate_clarification_question(
+                store=store,
+                simulation_id=simulation_id,
+                request_body=validated,
+            )
         except ApiError as exc:
             return error_envelope(exc.status_code, exc.code, exc.message)
 

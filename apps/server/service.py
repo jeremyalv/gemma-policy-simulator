@@ -7,14 +7,17 @@ from typing import Any, cast
 from uuid import uuid4
 
 from packages.contracts.python.contracts_v1 import (
+    ClarificationQuestionEnvelope,
     CreateSimulationEnvelope,
     CreateSimulationRequest,
     DeleteSimulationEnvelope,
+    GenerateClarificationRequest,
     SimulationDraft,
     SimulationListEnvelope,
     SimulationListItem,
 )
 
+from .clarification_generator import ClarificationGenerationError, generate_clarification_with_gemma
 from .errors import ApiError
 from .storage import SimulationStore
 
@@ -25,6 +28,10 @@ def new_simulation_id() -> str:
 
 def new_request_id() -> str:
     return f"req_{uuid4().hex[:8]}"
+
+
+def new_clarification_id() -> str:
+    return f"cl_{uuid4().hex[:8]}"
 
 
 def utc_now_iso() -> str:
@@ -123,6 +130,64 @@ def delete_simulation(store: SimulationStore, simulation_id: str) -> DeleteSimul
         DeleteSimulationEnvelope,
         {
             "data": {"id": simulation_id, "deleted": True},
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def generate_clarification_question(
+    store: SimulationStore,
+    simulation_id: str,
+    request_body: GenerateClarificationRequest,
+) -> ClarificationQuestionEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    if simulation["status"] != "pending":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message="clarification generation is only allowed for pending simulations",
+            status_code=409,
+        )
+
+    try:
+        question_text, rationale = generate_clarification_with_gemma(
+            policy_text=simulation["policy_text"],
+            focus=request_body["focus"],
+        )
+    except ClarificationGenerationError as exc:
+        raise ApiError(
+            code="MODEL_RUNTIME_ERROR",
+            message=exc.message,
+            status_code=500,
+        ) from exc
+
+    clarification_id = new_clarification_id()
+    turn_index = int(simulation.get("clarification_turn_index") or 0) + 1
+    store.update_clarification_state(
+        simulation_id=simulation_id,
+        clarification_status="in_progress",
+        clarification_turn_index=turn_index,
+        current_clarification_id=clarification_id,
+    )
+
+    return cast(
+        ClarificationQuestionEnvelope,
+        {
+            "data": {
+                "clarification_id": clarification_id,
+                "simulation_id": simulation_id,
+                "question_text": question_text,
+                "rationale": rationale,
+                "status": "open",
+                "turn_index": turn_index,
+            },
             "error": None,
             "meta": {"request_id": new_request_id()},
         },

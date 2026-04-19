@@ -36,7 +36,10 @@ class SimulationStore:
                     created_at TEXT NOT NULL,
                     completed_at TEXT,
                     mean_approval REAL,
-                    refined_policy_text TEXT
+                    refined_policy_text TEXT,
+                    clarification_status TEXT NOT NULL DEFAULT 'none',
+                    clarification_turn_index INTEGER NOT NULL DEFAULT 0,
+                    current_clarification_id TEXT
                 )
                 """
             )
@@ -48,6 +51,12 @@ class SimulationStore:
                 conn.execute("ALTER TABLE simulations ADD COLUMN completed_at TEXT")
             if "mean_approval" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN mean_approval REAL")
+            if "clarification_status" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN clarification_status TEXT NOT NULL DEFAULT 'none'")
+            if "clarification_turn_index" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN clarification_turn_index INTEGER NOT NULL DEFAULT 0")
+            if "current_clarification_id" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN current_clarification_id TEXT")
 
     def insert_simulation(self, row: dict[str, Any]) -> None:
         filters_json = json.dumps(row.get("filters")) if row.get("filters") else None
@@ -106,6 +115,9 @@ class SimulationStore:
             "completed_at": row["completed_at"],
             "mean_approval": row["mean_approval"],
             "refined_policy_text": row["refined_policy_text"],
+            "clarification_status": row["clarification_status"],
+            "clarification_turn_index": row["clarification_turn_index"],
+            "current_clarification_id": row["current_clarification_id"],
         }
 
     def count_simulations(self, status: str | None = None) -> int:
@@ -166,3 +178,26 @@ class SimulationStore:
                 (simulation_id,),
             )
             return int(cursor.rowcount)
+
+    def update_clarification_state(
+        self,
+        *,
+        simulation_id: str,
+        clarification_status: str,
+        clarification_turn_index: int,
+        current_clarification_id: str | None,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE simulations
+                SET clarification_status = ?, clarification_turn_index = ?, current_clarification_id = ?
+                WHERE id = ?
+                """,
+                (
+                    clarification_status,
+                    clarification_turn_index,
+                    current_clarification_id,
+                    simulation_id,
+                ),
+            )
