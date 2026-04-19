@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import datetime, timezone
 from typing import Any, cast
 from uuid import uuid4
@@ -19,6 +20,7 @@ from packages.contracts.python.contracts_v1 import (
     GenerateClarificationRequest,
     RunAcceptedEnvelope,
     RunSimulationRequest,
+    SimulationStatusEnvelope,
     SimulationDraft,
     SimulationListEnvelope,
     SimulationListItem,
@@ -33,6 +35,7 @@ from .errors import ApiError
 from .storage import SimulationStore
 
 MAX_CLARIFICATION_TURNS = 3
+ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
 
 
 def new_simulation_id() -> str:
@@ -51,6 +54,10 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _estimate_seconds(effective_sample_size: int, runtime_profile: str) -> int:
     # Deterministic baseline heuristic for run acceptance metadata.
     multiplier_by_profile = {
@@ -61,6 +68,85 @@ def _estimate_seconds(effective_sample_size: int, runtime_profile: str) -> int:
     }
     multiplier = multiplier_by_profile.get(runtime_profile, 0.5)
     return max(5, int(round(effective_sample_size * multiplier)))
+
+
+def _parse_utc_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _elapsed_seconds_from_started_at(started_at: Any) -> int:
+    started_at_dt = _parse_utc_timestamp(started_at)
+    if started_at_dt is None:
+        return 0
+    elapsed = (_utc_now() - started_at_dt).total_seconds()
+    return max(0, int(elapsed))
+
+
+def _resolve_runtime_profile(simulation: dict[str, Any]) -> str:
+    runtime_profile = simulation.get("runtime_profile")
+    if isinstance(runtime_profile, str) and runtime_profile in ALLOWED_RUNTIME_PROFILES:
+        return runtime_profile
+    return "auto"
+
+
+def _resolve_agents_total(simulation: dict[str, Any]) -> int:
+    effective_sample_size = simulation.get("effective_sample_size")
+    if isinstance(effective_sample_size, int) and effective_sample_size > 0:
+        return effective_sample_size
+
+    sample_size = simulation.get("sample_size")
+    if isinstance(sample_size, int) and sample_size > 0:
+        return sample_size
+    return 0
+
+
+def _resolve_estimated_seconds(simulation: dict[str, Any], *, agents_total: int, runtime_profile: str) -> int:
+    estimated_seconds = simulation.get("estimated_seconds")
+    if isinstance(estimated_seconds, int) and estimated_seconds > 0:
+        return estimated_seconds
+    baseline_agents_total = max(agents_total, 1)
+    return _estimate_seconds(baseline_agents_total, runtime_profile)
+
+
+def _derive_progress_snapshot(
+    *,
+    status: str,
+    agents_total: int,
+    elapsed_seconds: int,
+    estimated_seconds: int,
+    has_timing: bool,
+) -> tuple[int, float, int]:
+    if status == "pending":
+        return 0, 0.0, 0
+
+    if status == "completed":
+        return agents_total, 100.0, 0
+
+    if status == "running":
+        raw_progress = (elapsed_seconds / estimated_seconds) * 100 if estimated_seconds > 0 else 0.0
+        progress_pct = min(99.9, max(0.0, raw_progress))
+        agents_completed = min(agents_total, math.floor((agents_total * progress_pct) / 100))
+        estimated_seconds_remaining = max(0, estimated_seconds - elapsed_seconds)
+        return agents_completed, float(progress_pct), estimated_seconds_remaining
+
+    # Failed is terminal for remaining-time, but can expose partial progress when timing exists.
+    if has_timing:
+        raw_progress = (elapsed_seconds / estimated_seconds) * 100 if estimated_seconds > 0 else 0.0
+        progress_pct = min(99.9, max(0.0, raw_progress))
+        agents_completed = min(agents_total, math.floor((agents_total * progress_pct) / 100))
+        return agents_completed, float(progress_pct), 0
+
+    return 0, 0.0, 0
 
 
 def _run_request_fingerprint(simulation_id: str, request_body: RunSimulationRequest) -> str:
@@ -473,4 +559,51 @@ def run_simulation(
         runtime_profile=runtime_profile,
         estimated_seconds=estimated_seconds,
         effective_sample_size=effective_sample_size,
+    )
+
+
+def get_simulation_status(store: SimulationStore, simulation_id: str) -> SimulationStatusEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    status = cast(str, simulation["status"])
+    runtime_profile = _resolve_runtime_profile(simulation)
+    agents_total = _resolve_agents_total(simulation)
+    estimated_seconds = _resolve_estimated_seconds(
+        simulation,
+        agents_total=agents_total,
+        runtime_profile=runtime_profile,
+    )
+    elapsed_seconds = _elapsed_seconds_from_started_at(simulation.get("started_at"))
+    has_timing = _parse_utc_timestamp(simulation.get("started_at")) is not None
+
+    agents_completed, progress_pct, estimated_seconds_remaining = _derive_progress_snapshot(
+        status=status,
+        agents_total=agents_total,
+        elapsed_seconds=elapsed_seconds,
+        estimated_seconds=estimated_seconds,
+        has_timing=has_timing,
+    )
+
+    return cast(
+        SimulationStatusEnvelope,
+        {
+            "data": {
+                "id": simulation_id,
+                "status": status,
+                "agents_total": agents_total,
+                "agents_completed": agents_completed,
+                "progress_pct": float(progress_pct),
+                "estimated_seconds_remaining": estimated_seconds_remaining,
+                "runtime_profile": runtime_profile,
+                "effective_sample_size": agents_total,
+            },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
     )

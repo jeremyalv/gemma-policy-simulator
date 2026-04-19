@@ -18,6 +18,7 @@ from .service import (
     delete_simulation,
     generate_clarification_question,
     get_clarification_state,
+    get_simulation_status,
     list_simulation_history,
     new_request_id,
     run_simulation,
@@ -154,6 +155,15 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
         return JSONResponse(status_code=202, content=response)
+
+    @app.get("/api/v1/simulations/{simulation_id}/status", status_code=200)
+    async def get_simulation_status_by_id(simulation_id: str) -> Any:
+        try:
+            response = get_simulation_status(store, simulation_id)
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
 
     @app.post("/api/v1/clarifications/{clarification_id}/answer", status_code=200)
     async def post_answer_clarification(clarification_id: str, request: Request) -> Any:
