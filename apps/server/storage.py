@@ -158,3 +158,11 @@ class SimulationStore:
             }
             for row in rows
         ]
+
+    def delete_simulation(self, simulation_id: str) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM simulations WHERE id = ?",
+                (simulation_id,),
+            )
+            return int(cursor.rowcount)

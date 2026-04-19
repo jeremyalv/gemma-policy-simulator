@@ -9,11 +9,13 @@ from uuid import uuid4
 from packages.contracts.python.contracts_v1 import (
     CreateSimulationEnvelope,
     CreateSimulationRequest,
+    DeleteSimulationEnvelope,
     SimulationDraft,
     SimulationListEnvelope,
     SimulationListItem,
 )
 
+from .errors import ApiError
 from .storage import SimulationStore
 
 
@@ -97,5 +99,31 @@ def list_simulation_history(
                 "limit": limit,
                 "request_id": new_request_id(),
             },
+        },
+    )
+
+
+def cleanup_simulation_artifacts(simulation_id: str) -> None:
+    """Cleanup hook for non-database simulation artifacts."""
+    _ = simulation_id
+
+
+def delete_simulation(store: SimulationStore, simulation_id: str) -> DeleteSimulationEnvelope:
+    cleanup_simulation_artifacts(simulation_id)
+    deleted_rows = store.delete_simulation(simulation_id)
+
+    if deleted_rows == 0:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    return cast(
+        DeleteSimulationEnvelope,
+        {
+            "data": {"id": simulation_id, "deleted": True},
+            "error": None,
+            "meta": {"request_id": new_request_id()},
         },
     )

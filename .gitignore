@@ -1,5 +1,9 @@
 .personal/
 
+# Python cache artifacts
+__pycache__/
+*.py[cod]
+
 node_modules
 .env
 .DS_Store
@@ -19,3 +23,6 @@ build
 .pnpm-store
 db/supabase/*
 db/archived_migrations/*
+
+# Local server runtime database
+apps/server/data/sims.db

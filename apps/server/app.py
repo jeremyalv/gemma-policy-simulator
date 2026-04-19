@@ -12,7 +12,12 @@ from fastapi.responses import JSONResponse
 from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
 from .errors import ApiError
-from .service import create_simulation_draft, list_simulation_history, new_request_id
+from .service import (
+    create_simulation_draft,
+    delete_simulation,
+    list_simulation_history,
+    new_request_id,
+)
 from .storage import SimulationStore
 from .validation import validate_create_simulation_payload, validate_list_simulations_query
 
@@ -79,6 +84,15 @@ def create_app(db_path: Path | None = None) -> FastAPI:
                 status=status,
                 sort=sort,
             )
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
+
+    @app.delete("/api/v1/simulations/{simulation_id}", status_code=200)
+    async def delete_simulation_by_id(simulation_id: str) -> Any:
+        try:
+            response = delete_simulation(store, simulation_id)
         except ApiError as exc:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
