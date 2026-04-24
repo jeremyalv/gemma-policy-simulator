@@ -1,7 +1,9 @@
 # AGENTS.md
 
 ## Purpose
-`gemma-policy-simulator` (SIMS) is a local-first synthetic multi-agent policy simulator. The system helps policymakers test policy variants against census-aligned synthetic personas before real-world rollout.
+`gemma-policy-simulator` — **InfiniPol**, a local-first synthetic multi-agent policy simulator.
+The system helps policymakers test policy variants against census-aligned synthetic personas
+before real-world rollout. Frontend brand: **InfiniPol** (formerly SIMS).
 
 ## Repo Map
 - `apps/client/`: frontend application (UI, polling, visualization, pre-run clarification flow).

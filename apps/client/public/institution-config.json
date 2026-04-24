@@ -1,0 +1,31 @@
+{
+  "_comment": "Institution configuration — edit this file to customise SIMS for your organisation. No rebuild required.",
+  "_version": "1",
+
+  "name": "SIMS Policy Simulator",
+  "short_name": "SIMS",
+  "tagline": "Simulate public response to policy before it goes live.",
+  "logo_url": "/logos/sims-logo.svg",
+  "favicon_url": "/favicon.ico",
+
+  "theme": "global-default",
+
+  "locale": "en",
+  "currency_symbol": "$",
+  "country_code": "US",
+
+  "support_email": "",
+  "homepage_url": "",
+
+  "features": {
+    "policy_comparison": true,
+    "challenge_mode": true,
+    "clarification_mode": true,
+    "csv_export": true,
+    "dataset_selector": true
+  },
+
+  "default_dataset": "nemotron_usa",
+
+  "footer_note": "Powered by SIMS · Synthetic personas from NVIDIA Nemotron-Personas (CC BY 4.0)"
+}

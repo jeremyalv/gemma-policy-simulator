@@ -1,0 +1,266 @@
+/* ============================================================
+   SIMS — Global Design Tokens
+   All values here are the single source of truth.
+   Components MUST reference these vars, never hardcode hex.
+   ============================================================ */
+
+/* --- Self-hosted fonts --- */
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/SourceSerif4-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 500 600 700;
+  font-display: swap;
+  src: url('/fonts/IBMPlexSans-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Variable.woff2') format('woff2');
+}
+
+/* --- Tailwind utilities only (base/preflight omitted — Mantine provides its own reset) --- */
+@tailwind utilities;
+
+/* ============================================================
+   DEFAULT THEME: global-default
+   Override entire block in ThemeProvider for other themes.
+   ============================================================ */
+:root {
+  /* === Core Neutrals === */
+  --color-bg-base:    #FAFAF8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-subtle:  #F4F2ED;
+  --color-bg-muted:   #EFEDE6;
+
+  --color-text-primary:   #1C1917;
+  --color-text-secondary: #44403C;
+  --color-text-tertiary:  #78716C;
+  --color-text-disabled:  #A8A29E;
+
+  --color-border-subtle:  #E7E5E0;
+  --color-border-default: #D6D3CE;
+  --color-border-strong:  #A8A29E;
+
+  /* === Brand Accent — global-default (deep green / gold) === */
+  --color-accent-primary:         #1B4332;
+  --color-accent-primary-hover:   #2D5F4A;
+  --color-accent-primary-subtle:  #E8F0EB;
+  --color-accent-secondary:       #C8A951;
+  --color-accent-secondary-subtle:#FDF6E3;
+
+  /* === Status === */
+  --color-status-success: #15803D;
+  --color-status-warning: #B45309;
+  --color-status-error:   #B91C1C;
+  --color-status-info:    #1E40AF;
+
+  /* === Data Viz — Approval diverging scale (1–5) === */
+  --color-data-approval-1: #B91C1C;
+  --color-data-approval-2: #EA580C;
+  --color-data-approval-3: #A8A29E;
+  --color-data-approval-4: #65A30D;
+  --color-data-approval-5: #15803D;
+
+  /* === Data Viz — Emotion categorical (5 classes) === */
+  --color-data-emotion-anger:   #B91C1C;
+  --color-data-emotion-concern: #B45309;
+  --color-data-emotion-neutral: #78716C;
+  --color-data-emotion-hope:    #0369A1;
+  --color-data-emotion-joy:     #15803D;
+
+  /* === Typography === */
+  --font-serif: 'Source Serif 4', 'Lora', Georgia, serif;
+  --font-sans:  'IBM Plex Sans', -apple-system, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, monospace;
+
+  /* === Type scale (modular 1.25) === */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.563rem;
+  --text-3xl:  1.953rem;
+  --text-4xl:  2.441rem;
+  --text-5xl:  3.052rem;
+
+  --leading-tight:   1.2;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.7;
+
+  /* === Spacing (4px grid) === */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  /* === Layout === */
+  --max-w-prose:     65ch;
+  --max-w-content:   860px;
+  --max-w-dashboard: 1440px;
+
+  /* === Radius === */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* === Shadow === */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+
+  /* === Transition === */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   350ms ease;
+}
+
+/* ============================================================
+   THEME: gov-formal (navy/gold — ministries)
+   Applied by ThemeProvider when theme = "gov-formal"
+   ============================================================ */
+[data-theme="gov-formal"] {
+  --color-accent-primary:        #003366;
+  --color-accent-primary-hover:  #004488;
+  --color-accent-primary-subtle: #E6EDF5;
+  --color-accent-secondary:      #D4AF37;
+  --color-accent-secondary-subtle: #FDF8E6;
+}
+
+/* ============================================================
+   THEME: think-tank-modern (indigo/amber — research institutes)
+   ============================================================ */
+[data-theme="think-tank-modern"] {
+  --color-bg-base:    #F8F8FC;
+  --color-bg-subtle:  #F0F0F8;
+  --color-accent-primary:        #6366F1;
+  --color-accent-primary-hover:  #4F46E5;
+  --color-accent-primary-subtle: #EEF2FF;
+  --color-accent-secondary:      #F59E0B;
+  --color-accent-secondary-subtle: #FFFBEB;
+}
+
+/* ============================================================
+   THEME: academic-warm (maroon/mustard — universities)
+   ============================================================ */
+[data-theme="academic-warm"] {
+  --color-accent-primary:        #7C2D12;
+  --color-accent-primary-hover:  #9A3412;
+  --color-accent-primary-subtle: #FFF1EE;
+  --color-accent-secondary:      #CA8A04;
+  --color-accent-secondary-subtle: #FEFCE8;
+}
+
+/* ============================================================
+   BASE RESETS
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-base);
+}
+
+body {
+  min-height: 100dvh;
+  line-height: var(--leading-normal);
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+}
+
+h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+/* Numeric content always tabular */
+.tabular-nums,
+[data-metric],
+.metric-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+/* Approval score color utility */
+.approval-1 { color: var(--color-data-approval-1); }
+.approval-2 { color: var(--color-data-approval-2); }
+.approval-3 { color: var(--color-data-approval-3); }
+.approval-4 { color: var(--color-data-approval-4); }
+.approval-5 { color: var(--color-data-approval-5); }
+
+.approval-bg-1 { background-color: var(--color-data-approval-1); }
+.approval-bg-2 { background-color: var(--color-data-approval-2); }
+.approval-bg-3 { background-color: var(--color-data-approval-3); }
+.approval-bg-4 { background-color: var(--color-data-approval-4); }
+.approval-bg-5 { background-color: var(--color-data-approval-5); }
+
+/* Emotion color utility */
+.emotion-anger   { color: var(--color-data-emotion-anger); }
+.emotion-concern { color: var(--color-data-emotion-concern); }
+.emotion-neutral { color: var(--color-data-emotion-neutral); }
+.emotion-hope    { color: var(--color-data-emotion-hope); }
+.emotion-joy     { color: var(--color-data-emotion-joy); }
+
+/* Spinner keyframe — used by StatusBadge "running" state */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Print styles — for PDF export via browser print */
+@media print {
+  .no-print { display: none !important; }
+  .print-break-before { break-before: page; }
+
+  body {
+    background: white;
+    color: black;
+    font-size: 11pt;
+  }
+
+  h1, h2, h3 {
+    color: black;
+    page-break-after: avoid;
+  }
+}

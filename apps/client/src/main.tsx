@@ -1,0 +1,81 @@
+/**
+ * SIMS — React entry point
+ *
+ * Boot order:
+ *   1. Start MSW mock worker (dev/mock mode only)
+ *   2. Mount React tree: ThemeProvider → QueryClientProvider → RouterProvider → App
+ */
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ThemeProvider } from '@/theme/ThemeProvider'
+import App from './App'
+
+// ── Mantine CSS — must come before globals so our CSS vars override Mantine defaults
+import '@mantine/core/styles.css'
+import '@mantine/notifications/styles.css'
+
+import '@/styles/globals.css'
+
+// ── TanStack Query client ─────────────────────────────────────────────────────
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Stale after 30s — most SIMS data changes via explicit user action
+      staleTime: 30_000,
+      // Retry once on failure; don't hammer backend on hard 4xx
+      retry: (failureCount, error: unknown) => {
+        if (error && typeof error === 'object' && 'httpStatus' in error) {
+          const status = (error as { httpStatus: number }).httpStatus
+          // Never retry client errors
+          if (status >= 400 && status < 500) return false
+        }
+        return failureCount < 1
+      },
+      // Show stale data while revalidating
+      refetchOnWindowFocus: true,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+})
+
+// ── Mock Service Worker ───────────────────────────────────────────────────────
+
+const useMocks =
+  import.meta.env.VITE_USE_MOCKS === 'true' ||
+  (import.meta.env.VITE_USE_MOCKS === undefined && import.meta.env.DEV)
+
+async function prepare(): Promise<void> {
+  if (useMocks) {
+    const { startMockWorker } = await import('@/mocks/browser')
+    await startMockWorker()
+  }
+}
+
+// ── Mount ─────────────────────────────────────────────────────────────────────
+
+prepare().then(() => {
+  const root = document.getElementById('root')
+  if (!root) throw new Error('[SIMS] #root element not found in index.html')
+
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <App />
+          </BrowserRouter>
+          {import.meta.env.DEV && (
+            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
+          )}
+        </QueryClientProvider>
+      </ThemeProvider>
+    </React.StrictMode>,
+  )
+})

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "aca-2010",
+    "title": "Affordable Care Act (ACA)",
+    "year": 2010,
+    "category": "Healthcare",
+    "keywords": ["healthcare", "insurance", "mandate", "medicaid", "premium", "coverage", "pre-existing"],
+    "summary": "Expanded health insurance coverage through individual mandates, Medicaid expansion, and marketplace exchanges. Required coverage of pre-existing conditions."
+  },
+  {
+    "id": "snap-expansion-2009",
+    "title": "SNAP (Food Stamps) Expansion",
+    "year": 2009,
+    "category": "Social Welfare",
+    "keywords": ["food stamps", "snap", "nutrition", "poverty", "benefits", "eligibility", "low-income"],
+    "summary": "Temporarily expanded SNAP eligibility and benefit amounts as part of the American Recovery and Reinvestment Act to address food insecurity during the recession."
+  },
+  {
+    "id": "minimum-wage-2009",
+    "title": "Federal Minimum Wage Increase to $7.25",
+    "year": 2009,
+    "category": "Labor",
+    "keywords": ["minimum wage", "labor", "workers", "wages", "hourly", "income", "employment"],
+    "summary": "Raised the federal minimum wage from $6.55 to $7.25 per hour, the third step of an increase signed into law in 2007."
+  },
+  {
+    "id": "flsa-overtime-2016",
+    "title": "FLSA Overtime Rule Update",
+    "year": 2016,
+    "category": "Labor",
+    "keywords": ["overtime", "salary", "workers", "exempt", "labor", "wages", "white collar"],
+    "summary": "Proposed doubling the salary threshold for overtime exemption to $47,476, potentially extending overtime protections to 4.2 million workers."
+  },
+  {
+    "id": "title-ix-1972",
+    "title": "Title IX Education Amendments",
+    "year": 1972,
+    "category": "Education & Civil Rights",
+    "keywords": ["gender", "education", "discrimination", "sports", "equality", "women", "sex"],
+    "summary": "Prohibits sex-based discrimination in any education program or activity receiving federal financial assistance, spurring expansion of women's sports programs."
+  },
+  {
+    "id": "clean-air-act-1990",
+    "title": "Clean Air Act Amendments",
+    "year": 1990,
+    "category": "Environment",
+    "keywords": ["pollution", "air quality", "emissions", "epa", "environment", "clean", "ozone"],
+    "summary": "Strengthened regulation of air pollutants, established cap-and-trade for sulfur dioxide, and tightened vehicle emission standards."
+  },
+  {
+    "id": "cares-act-2020",
+    "title": "CARES Act — COVID-19 Relief",
+    "year": 2020,
+    "category": "Economic Relief",
+    "keywords": ["stimulus", "relief", "pandemic", "unemployment", "small business", "direct payment", "covid"],
+    "summary": "Provided $2.2 trillion in economic stimulus including $1,200 direct payments, expanded unemployment benefits, and $350B in small business loans."
+  },
+  {
+    "id": "student-loan-forgiveness-2022",
+    "title": "Student Loan Debt Relief Plan",
+    "year": 2022,
+    "category": "Education",
+    "keywords": ["student loan", "debt forgiveness", "education", "college", "pell grant", "income", "forgiveness"],
+    "summary": "Proposed up to $10,000 in federal student loan forgiveness ($20,000 for Pell Grant recipients) for borrowers under $125,000 annual income."
+  },
+  {
+    "id": "eitc-expansion-2021",
+    "title": "Earned Income Tax Credit Expansion",
+    "year": 2021,
+    "category": "Tax & Benefits",
+    "keywords": ["eitc", "tax credit", "low income", "workers", "childless", "poverty", "refundable"],
+    "summary": "Expanded EITC for childless workers, nearly tripling the maximum credit and raising the income cap as part of the American Rescue Plan."
+  },
+  {
+    "id": "child-tax-credit-2021",
+    "title": "Expanded Child Tax Credit",
+    "year": 2021,
+    "category": "Tax & Benefits",
+    "keywords": ["child tax credit", "children", "families", "poverty", "monthly payments", "refundable", "parents"],
+    "summary": "Temporarily expanded the Child Tax Credit to $3,000–$3,600 per child with monthly advance payments, reducing child poverty by an estimated 40%."
+  },
+  {
+    "id": "paid-leave-federal-2020",
+    "title": "Federal Emergency Paid Leave (FFCRA)",
+    "year": 2020,
+    "category": "Labor",
+    "keywords": ["paid leave", "sick leave", "family leave", "pandemic", "workers", "parental", "caregiving"],
+    "summary": "Required employers with fewer than 500 employees to provide up to 80 hours of paid sick leave and 12 weeks of expanded family and medical leave for COVID-19 reasons."
+  },
+  {
+    "id": "eviction-moratorium-2020",
+    "title": "CDC Eviction Moratorium",
+    "year": 2020,
+    "category": "Housing",
+    "keywords": ["eviction", "housing", "renters", "landlord", "pandemic", "moratorium", "rent"],
+    "summary": "Halted residential evictions for non-payment of rent for tenants meeting income thresholds, protecting an estimated 40 million renters during the pandemic."
+  },
+  {
+    "id": "medicare-drug-negotiation-2022",
+    "title": "Medicare Drug Price Negotiation",
+    "year": 2022,
+    "category": "Healthcare",
+    "keywords": ["medicare", "prescription drugs", "drug prices", "seniors", "pharmaceutical", "negotiation", "inflation"],
+    "summary": "Allowed Medicare to negotiate prices for up to 10 high-cost drugs by 2026, expanding to 20+ by 2029, capping out-of-pocket drug costs at $2,000/year."
+  },
+  {
+    "id": "infrastructure-2021",
+    "title": "Bipartisan Infrastructure Investment and Jobs Act",
+    "year": 2021,
+    "category": "Infrastructure",
+    "keywords": ["infrastructure", "roads", "bridges", "broadband", "transit", "water", "electric vehicle"],
+    "summary": "Invested $1.2 trillion in physical infrastructure including $550B in new spending on roads, bridges, rail, broadband, and clean water systems."
+  },
+  {
+    "id": "voting-rights-act-1965",
+    "title": "Voting Rights Act",
+    "year": 1965,
+    "category": "Civil Rights",
+    "keywords": ["voting", "civil rights", "discrimination", "election", "registration", "minority", "ballot"],
+    "summary": "Prohibited discriminatory voting practices that had disenfranchised Black Americans, requiring federal approval for changes to voting laws in covered jurisdictions."
+  },
+  {
+    "id": "daca-2012",
+    "title": "Deferred Action for Childhood Arrivals (DACA)",
+    "year": 2012,
+    "category": "Immigration",
+    "keywords": ["immigration", "dreamers", "deportation", "citizenship", "work permit", "undocumented", "youth"],
+    "summary": "Provided renewable two-year periods of deferred action from deportation and eligibility for work permits to individuals brought to the US as children."
+  },
+  {
+    "id": "chips-act-2022",
+    "title": "CHIPS and Science Act",
+    "year": 2022,
+    "category": "Technology & Manufacturing",
+    "keywords": ["semiconductors", "manufacturing", "technology", "chips", "supply chain", "research", "workforce"],
+    "summary": "Provided $52.7B for domestic semiconductor manufacturing and research, and $200B for scientific R&D to boost US competitiveness with China."
+  },
+  {
+    "id": "clean-power-plan-2015",
+    "title": "Clean Power Plan",
+    "year": 2015,
+    "category": "Environment",
+    "keywords": ["carbon", "emissions", "power plants", "climate", "renewable energy", "coal", "electricity"],
+    "summary": "Required US power sector to cut carbon dioxide emissions 32% below 2005 levels by 2030, promoting shift from coal to natural gas and renewables."
+  },
+  {
+    "id": "osha-heat-standard-2024",
+    "title": "OSHA Heat Illness Prevention Standard (Proposed)",
+    "year": 2024,
+    "category": "Labor & Safety",
+    "keywords": ["heat", "workplace safety", "outdoor workers", "osha", "temperature", "breaks", "hydration"],
+    "summary": "Proposed requiring employers to provide water, shade, and rest breaks to outdoor and indoor workers when heat reaches 80°F, with enhanced protections above 90°F."
+  },
+  {
+    "id": "housing-first-policy-2003",
+    "title": "Housing First — Chronic Homelessness Initiative",
+    "year": 2003,
+    "category": "Housing",
+    "keywords": ["homelessness", "housing", "shelter", "mental health", "substance abuse", "supportive services", "affordable"],
+    "summary": "Prioritized moving chronically homeless individuals directly into permanent housing before addressing other issues, reversing the traditional treatment-first ladder approach."
+  }
+]
