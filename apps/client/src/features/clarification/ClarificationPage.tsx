@@ -259,20 +259,37 @@ export default function ClarificationPage() {
               <Alert
                 icon={<AlertCircle size={16} />}
                 color="red"
+                title="Could not connect to the AI"
                 style={{ borderColor: 'var(--color-status-error)' }}
               >
-                <Group justify="space-between" align="center">
-                  <Text size="sm">{flow.error ?? 'Something went wrong.'}</Text>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    leftSection={<RefreshCw size={12} />}
-                    onClick={flow.retry}
-                  >
-                    Retry
-                  </Button>
-                </Group>
+                <Stack gap={10}>
+                  <Text size="sm">
+                    {flow.error?.includes('non-JSON') || flow.error?.includes('backend')
+                      ? 'The backend is not responding. Make sure the server is running, then retry.'
+                      : (flow.error ?? 'Something went wrong generating the clarification question.')}
+                  </Text>
+                  <Group gap={8} wrap="wrap">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="red"
+                      leftSection={<RefreshCw size={12} />}
+                      onClick={flow.retry}
+                    >
+                      Retry
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="filled"
+                      color="gray"
+                      leftSection={<SkipForward size={12} />}
+                      loading={isRunning}
+                      onClick={() => triggerRun(false)}
+                    >
+                      Skip clarification, run directly
+                    </Button>
+                  </Group>
+                </Stack>
               </Alert>
             )}
 

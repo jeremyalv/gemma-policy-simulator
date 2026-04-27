@@ -127,18 +127,32 @@ export default function DashboardPage() {
         {isError && (
           <Alert
             icon={<AlertCircle size={16} />}
-            color="red"
-            title="Could not load simulations"
-            style={{ borderColor: 'var(--color-status-error)' }}
+            color="orange"
+            title="Could not reach the backend"
+            style={{ borderColor: 'var(--color-status-warning)' }}
           >
-            {(error as Error)?.message ?? 'Unknown error. Please refresh.'}
+            <Stack gap={8}>
+              <Text size="sm">
+                {(error as Error)?.message?.includes('non-JSON') || (error as Error)?.message?.includes('backend')
+                  ? 'The API server is not responding. Make sure the backend is running on the expected port.'
+                  : ((error as Error)?.message ?? 'Unknown error. Please refresh.')}
+              </Text>
+              <Button
+                size="xs"
+                variant="outline"
+                color="orange"
+                leftSection={<RefreshCw size={12} />}
+                onClick={() => refetch()}
+                style={{ width: 'fit-content' }}
+              >
+                Try again
+              </Button>
+            </Stack>
           </Alert>
         )}
 
         {/* ── Filter bar ───────────────────────────────────────── */}
-        {!isError && (
-          <FilterBar value={filter} onChange={handleFilterChange} />
-        )}
+        <FilterBar value={filter} onChange={handleFilterChange} />
 
         {/* ── Table or empty state ─────────────────────────────── */}
         {!isError && !isLoading && filtered.length === 0 ? (

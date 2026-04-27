@@ -234,7 +234,7 @@ const DEMOS: DemoItem[] = [
 
 const FEATURES = [
   { icon: <Activity size={20} />, title: 'Policy Simulation', color: '#0D9488', description: 'Run any policy through thousands of synthetic personas drawn from real demographic data. Get approval scores, emotion profiles, and representative voices in minutes.' },
-  { icon: <Target size={20} />, title: 'AI Challenge Mode', color: '#7C3AED', description: 'Let Gemma stress-test your results. Pick a challenge focus — weak segment, behavioral change, emotion bias, or demographic gap — and get targeted push-back.' },
+  { icon: <Target size={20} />, title: 'AI Challenge Mode', color: '#7C3AED', description: 'Let Gemma stress-test your results. Pick a challenge focus (weak segment, behavioral change, emotion bias, or demographic gap) and get targeted, evidence-backed push-back.' },
   { icon: <GitCompare size={20} />, title: 'Side-by-side Comparison', color: '#0369A1', description: 'Compare two simulations head-to-head. See delta scores, diverging emotions, and distribution differences to understand which policy variant lands better.' },
   { icon: <Users size={20} />, title: 'Demographic Breakdowns', color: '#B45309', description: 'Drill into approval by age group, marital status, state, and occupation. Filter the sample to any sub-population before you run.' },
   { icon: <Shield size={20} />, title: 'Clarification Flow', color: '#15803D', description: 'Not sure your policy is worded clearly? Let Gemma ask clarifying questions before the simulation runs, sharpening the prompt for more accurate results.' },
@@ -308,7 +308,7 @@ const USE_CASES = [
     icon: <TrendingUp size={22} />,
     color: '#0D9488',
     role: 'Policy Analyst',
-    quote: '"I can test 6 variants of a tax reform proposal in one afternoon — not one quarter."',
+    quote: '"I can test 6 variants of a tax reform proposal in one afternoon, not one quarter."',
     detail: 'Run rapid iteration cycles to find the framing that maximizes public support before presenting to leadership.',
   },
   {
@@ -519,7 +519,7 @@ function HeroSection() {
             <Stack gap={8} style={{ animation: 'lp-fade-up 650ms ease 160ms both' }}>
               <Text size="lg" c="var(--color-text-secondary)" lh={1.7} style={{ maxWidth: 500 }}>
                 Don't wait for backlash. Simulate public reactions to any policy proposal using
-                300,000+ synthetic personas — before a single real stakeholder sees it.
+                300,000+ synthetic personas, before a single real stakeholder sees it.
               </Text>
               <Group gap={6} align="center" style={{ backgroundColor: 'rgba(234,88,12,0.07)', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 8, padding: '8px 14px', width: 'fit-content' }}>
                 <Text style={{ fontSize: 12.5, color: '#B45309', fontWeight: 600 }}>
@@ -1012,7 +1012,7 @@ function HowItWorksSection() {
   const ref = useRef<HTMLDivElement>(null)
   const visible = useInView(ref, 0.1)
   const steps = [
-    { n: '01', title: 'Describe your policy', body: 'Write a plain-language description — scope, mechanisms, costs, benefits. The clearer the input, the sharper the simulation.' },
+    { n: '01', title: 'Describe your policy', body: 'Write a plain-language description covering scope, mechanisms, costs, and benefits. The clearer the input, the sharper the simulation.' },
     { n: '02', title: 'Choose your audience', body: 'Filter by state, age, sex, education, or occupation — or leave blank for a nationally representative US sample.' },
     { n: '03', title: 'Run & review', body: 'Get a mean approval score (1–5), emotion profile, behavioral-change estimate, demographic breakdown, and persona quotes.' },
     { n: '04', title: 'Challenge & iterate', body: 'Use AI Challenge Mode to stress-test weak spots, compare two variants side-by-side, or refine the wording and re-run.' },
@@ -1133,7 +1133,7 @@ function AntiViralHookBanner() {
             Policies don't fail quietly.
           </Text>
           <Text size="lg" c="var(--color-text-secondary)" lh={1.7} style={{ maxWidth: 540 }}>
-            They fail publicly — in headlines, in protests, in viral backlash. InfiniPol lets you
+            They fail publicly: through headlines, protests, and viral backlash. InfiniPol lets you
             catch the failure mode before anyone outside the room knows the policy exists.
             Internal testing with demographic data that actually represents your population.
           </Text>
@@ -1158,12 +1158,12 @@ function AntiViralHookBanner() {
 // ── GlobalVisionSection ───────────────────────────────────────────────────────
 
 const REGIONS = [
-  { name: 'United States', flag: '🇺🇸', status: 'Live', statusColor: '#15803D', detail: '300K+ NVIDIA Nemotron personas across 50 states' },
-  { name: 'Indonesia',     flag: '🇮🇩', status: 'Coming Soon', statusColor: '#0369A1', detail: 'Regional breakdown across 34 provinces' },
-  { name: 'European Union', flag: '🇪🇺', status: 'Planned', statusColor: '#78716C', detail: 'Cross-country personas for all 27 EU member states' },
-  { name: 'India',         flag: '🇮🇳', status: 'Planned', statusColor: '#78716C', detail: 'Stratified by state, caste category, and urban/rural' },
-  { name: 'Brazil',        flag: '🇧🇷', status: 'Planned', statusColor: '#78716C', detail: 'Regionalized by IBGE geographic areas' },
-  { name: 'Australia',     flag: '🇦🇺', status: 'Planned', statusColor: '#78716C', detail: 'SLA-level demographic breakdown' },
+  { name: 'United States', flag: '🇺🇸', status: 'Live Now', statusColor: '#15803D', detail: '300K+ NVIDIA Nemotron personas across all 50 states + territories' },
+  { name: 'Indonesia',     flag: '🇮🇩', status: 'Q2 2026',  statusColor: '#0D9488', detail: '270M personas across 34 provinces, urban/rural stratified' },
+  { name: 'India',         flag: '🇮🇳', status: 'Q3 2026',  statusColor: '#0369A1', detail: '1.4B population, 28 states + 8 union territories' },
+  { name: 'European Union', flag: '🇪🇺', status: 'Q4 2026', statusColor: '#7C3AED', detail: 'All 27 EU member states, cross-border harmonization focus' },
+  { name: 'Brazil',        flag: '🇧🇷', status: '2027',     statusColor: '#78716C', detail: 'Regionalized by IBGE macroregions and state boundaries' },
+  { name: 'Australia',     flag: '🇦🇺', status: '2027',     statusColor: '#78716C', detail: 'State and territory level, SLA demographic breakdown' },
 ]
 
 function GlobalVisionSection() {
@@ -1194,9 +1194,9 @@ function GlobalVisionSection() {
               Built for the world, starting with the US
             </Text>
             <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
-              Policy challenges are not bounded by borders. We're building localised, country-specific
-              datasets so every policy professional can test in context — not just against a generic
-              US demographic. InfiniPol is going global.
+              Policy challenges are not bounded by borders. We are building localised, country-specific
+              datasets so every policy professional can test in context, not just against a generic
+              US demographic. InfiniPol is going global, starting with Asia.
             </Text>
           </Stack>
 
@@ -1237,33 +1237,51 @@ function GlobalVisionSection() {
 
 const ROADMAP = [
   {
+    phase: 'Foundation',
+    quarter: 'Now',
+    title: 'United States (Live)',
+    description: '300,000+ NVIDIA Nemotron personas across all 50 US states. Census-aligned by age, sex, education, occupation, marital status, and location. The reference market for evidence-based policy testing.',
+    justification: 'The US has the richest open synthetic persona dataset available, a mature policy research ecosystem, and the highest demand for pre-rollout public reaction modeling. It is the natural starting point.',
+    icon: <CheckCircle size={16} />,
+    color: '#15803D',
+    done: true,
+  },
+  {
+    phase: 'Asia First',
     quarter: 'Q2 2026',
-    title: 'Indonesia Launch',
-    description: 'First international dataset — 270 million personas across 34 provinces, stratified by age, education, occupation, and urban/rural status.',
+    title: 'Indonesia',
+    description: '270 million personas across 34 provinces, stratified by age, education, income, religion, and urban/rural status. Full provincial breakdown from Aceh to Papua.',
+    justification: 'Indonesia is the third-largest democracy in the world and among the fastest-growing digital economies in Southeast Asia. Its government is actively digitizing public services and investing in participatory policy reform. No comparable synthetic dataset exists for this population.',
     icon: <Globe size={16} />,
     color: '#0D9488',
     done: false,
   },
   {
+    phase: 'Asia Expansion',
     quarter: 'Q3 2026',
-    title: 'EU Dataset',
-    description: 'Pan-European persona set covering all 27 EU member states, with country-specific cultural and economic nuance for cross-border policy testing.',
+    title: 'India',
+    description: '1.4 billion personas covering 28 states and 8 union territories, stratified by state, language group, urban/rural split, caste category, and income quintile.',
+    justification: 'India is the world\'s largest democracy with a federal structure that creates divergent policy needs across states. English is a working policy language, which simplifies input processing. The scale of unmet demand for pre-rollout policy testing is enormous across both central and state government levels.',
     icon: <Globe size={16} />,
     color: '#0369A1',
     done: false,
   },
   {
+    phase: 'Europe',
     quarter: 'Q4 2026',
-    title: 'Multi-language Support',
-    description: 'Policy input and persona responses in local languages — starting with Bahasa Indonesia, French, German, and Portuguese.',
-    icon: <Rocket size={16} />,
+    title: 'European Union',
+    description: 'Pan-European persona set covering all 27 EU member states, with country-level and cross-border cohorts for harmonization policy testing.',
+    justification: 'The EU produces hundreds of binding regulations per year that member states must implement. Policy think tanks, government departments, and advocacy groups across Europe need tools to test cross-border reception. No unified synthetic persona dataset exists at this scale for the EU.',
+    icon: <Globe size={16} />,
     color: '#7C3AED',
     done: false,
   },
   {
+    phase: 'Global',
     quarter: '2027',
-    title: 'Global Coverage',
-    description: '50+ countries, including India, Brazil, and Australia. Localised datasets for each major region with regulatory and cultural adapters.',
+    title: 'Brazil, Australia, and Beyond',
+    description: 'Expanding to 30+ countries including Brazil (IBGE macroregions), Australia (state and territory level), and additional Southeast Asia markets. Multi-language policy input launching alongside.',
+    justification: 'Brazil and Australia both have strong policy research cultures and large, geographically dispersed populations where regional opinion gaps matter significantly. Southeast Asia expansion follows Indonesia to cover Vietnam, Thailand, and the Philippines.',
     icon: <Calendar size={16} />,
     color: '#B45309',
     done: false,
@@ -1272,7 +1290,7 @@ const ROADMAP = [
 
 function RoadmapSection() {
   const ref = useRef<HTMLDivElement>(null)
-  const visible = useInView(ref, 0.1)
+  const visible = useInView(ref, 0.08)
   return (
     <Box py={80} style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <Container size="lg">
@@ -1285,10 +1303,11 @@ function RoadmapSection() {
               <Rocket size={22} color="#7C3AED" />
             </Box>
             <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              What's coming next
+              From the US to the world
             </Text>
-            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
-              InfiniPol is under active development. Here's what we're building toward.
+            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
+              We are expanding region by region, with each dataset purpose-built for the demographic
+              and policy context of that market. Asia comes first, then Europe, then global.
             </Text>
           </Stack>
 
@@ -1303,29 +1322,173 @@ function RoadmapSection() {
                 style={{
                   display: 'flex',
                   gap: 20,
-                  marginBottom: i < ROADMAP.length - 1 ? 28 : 0,
+                  marginBottom: i < ROADMAP.length - 1 ? 24 : 0,
                   transitionDelay: visible ? `${i * 90}ms` : '0ms',
                   position: 'relative',
                   zIndex: 1,
                 }}
               >
                 {/* Circle */}
-                <Box style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: `${item.color}18`, border: `2px solid ${item.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.color }}>
+                <Box style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  backgroundColor: item.done ? item.color : `${item.color}18`,
+                  border: `2px solid ${item.color}${item.done ? 'ff' : '60'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, color: item.done ? '#fff' : item.color,
+                }}>
                   {item.icon}
                 </Box>
 
-                <Box style={{ paddingTop: 8, flex: 1, backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border-subtle)', borderRadius: 10, padding: '16px 20px' }}>
-                  <Group gap={10} align="center" mb={6}>
-                    <Badge size="sm" style={{ backgroundColor: `${item.color}15`, color: item.color, border: `1px solid ${item.color}30`, fontWeight: 600 }}>
+                <Box style={{ flex: 1, backgroundColor: 'var(--color-bg-surface)', border: `1px solid ${item.done ? item.color + '40' : 'var(--color-border-subtle)'}`, borderRadius: 10, padding: '16px 20px' }}>
+                  <Group gap={8} align="center" mb={6} wrap="wrap">
+                    <Badge size="xs" style={{ backgroundColor: `${item.color}15`, color: item.color, border: `1px solid ${item.color}30`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {item.phase}
+                    </Badge>
+                    <Badge size="xs" variant="outline" style={{ color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-default)' }}>
                       {item.quarter}
                     </Badge>
                     <Text fw={700} size="sm" c="var(--color-text-primary)">{item.title}</Text>
+                    {item.done && (
+                      <Badge size="xs" color="green" variant="filled">Live</Badge>
+                    )}
                   </Group>
-                  <Text size="sm" c="var(--color-text-secondary)" lh={1.65}>{item.description}</Text>
+                  <Text size="sm" c="var(--color-text-secondary)" lh={1.65} mb={10}>{item.description}</Text>
+                  <Box style={{ backgroundColor: 'var(--color-bg-subtle)', borderRadius: 6, padding: '8px 12px', borderLeft: `3px solid ${item.color}60` }}>
+                    <Text size="xs" c="var(--color-text-tertiary)" fw={600} mb={2} style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>Why this market</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" lh={1.6}>{item.justification}</Text>
+                  </Box>
                 </Box>
               </Box>
             ))}
           </Box>
+
+        </Stack>
+      </Container>
+    </Box>
+  )
+}
+
+// ── ForecastedImpactSection ───────────────────────────────────────────────────
+
+const IMPACT_METRICS = [
+  { value: '10K+',  label: 'Policies simulated per year by 2027',          sub: 'Across all active markets',                icon: <BarChart2 size={20} />, color: '#0D9488' },
+  { value: '95%',   label: 'Faster than a traditional public consultation', sub: 'From weeks to under 2 minutes',            icon: <Zap size={20} />,       color: '#7C3AED' },
+  { value: '$50K+', label: 'Saved per test vs traditional focus groups',    sub: 'No recruitment, no facilities, no wait',   icon: <TrendingUp size={20} />, color: '#15803D' },
+  { value: '30+',   label: 'Countries covered by end of 2027',             sub: 'Starting with US, Indonesia, India, and EU', icon: <Globe size={20} />,     color: '#0369A1' },
+]
+
+const POTENTIAL_APPLICATIONS = [
+  {
+    title: 'Government Digital Services',
+    description: 'National and local governments can test proposed legislation against a demographically accurate synthetic population before public consultation opens, reducing the risk of organized backlash.',
+    icon: <Shield size={18} />, color: '#15803D',
+  },
+  {
+    title: 'Academic Policy Research',
+    description: 'Researchers can generate hypothesis-testing datasets at scale without the cost or timeline of primary data collection, enabling faster publication cycles and more robust pre-registration.',
+    icon: <Microscope size={18} />, color: '#7C3AED',
+  },
+  {
+    title: 'NGO and Advocacy Groups',
+    description: 'Civil society organizations can identify which population segments are most likely to benefit from, or oppose, a proposed intervention, sharpening advocacy and coalition strategy.',
+    icon: <Users size={18} />, color: '#0369A1',
+  },
+  {
+    title: 'Corporate Compliance and ESG',
+    description: 'Companies developing ESG commitments, workforce policies, or regulatory responses can model public and stakeholder reception before formal announcement, avoiding costly positioning mistakes.',
+    icon: <BookOpen size={18} />, color: '#B45309',
+  },
+]
+
+function ForecastedImpactSection() {
+  const ref = useRef<HTMLDivElement>(null)
+  const visible = useInView(ref, 0.08)
+  return (
+    <Box
+      py={80}
+      style={{
+        background: `
+          radial-gradient(ellipse 70% 55% at 50% 50%, rgba(27,67,50,0.06) 0%, transparent 65%),
+          var(--color-bg-surface)
+        `,
+        borderTop: '1px solid var(--color-border-subtle)',
+        borderBottom: '1px solid var(--color-border-subtle)',
+      }}
+    >
+      <Container size="lg">
+        <Stack gap={60}>
+
+          {/* Impact metrics */}
+          <Stack gap={40} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+            <Stack align="center" gap="sm" style={{ textAlign: 'center' }}>
+              <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
+                The scale we are building toward
+              </Text>
+              <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 500 }}>
+                Projected impact by 2027, based on current adoption trajectory and planned expansion.
+              </Text>
+            </Stack>
+            <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
+              {IMPACT_METRICS.map((m, i) => (
+                <Box
+                  key={m.label}
+                  className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-base)',
+                    border: '1px solid var(--color-border-subtle)',
+                    borderTop: `3px solid ${m.color}`,
+                    borderRadius: 12,
+                    padding: '24px 20px',
+                    transitionDelay: visible ? `${i * 70}ms` : '0ms',
+                  }}
+                >
+                  <Box style={{ color: m.color, marginBottom: 12 }}>{m.icon}</Box>
+                  <Text fw={800} style={{ fontSize: '2rem', color: m.color, lineHeight: 1, fontFamily: 'Source Serif 4, serif', marginBottom: 8 }}>
+                    {m.value}
+                  </Text>
+                  <Text size="sm" fw={600} c="var(--color-text-primary)" lh={1.4} mb={4}>{m.label}</Text>
+                  <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>{m.sub}</Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+
+          {/* Potential applications */}
+          <Stack gap={32}>
+            <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+              <Text fw={700} style={{ fontSize: '1.6rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
+                Where InfiniPol is headed
+              </Text>
+              <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
+                Beyond individual policy tests, here are the broader contexts where this platform creates the most value.
+              </Text>
+            </Stack>
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
+              {POTENTIAL_APPLICATIONS.map((app, i) => (
+                <Box
+                  key={app.title}
+                  className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-base)',
+                    border: '1px solid var(--color-border-subtle)',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    display: 'flex',
+                    gap: 16,
+                    transitionDelay: visible ? `${i * 80}ms` : '0ms',
+                  }}
+                >
+                  <Box style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: `${app.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: app.color, flexShrink: 0 }}>
+                    {app.icon}
+                  </Box>
+                  <Box>
+                    <Text fw={700} size="sm" c="var(--color-text-primary)" mb={6}>{app.title}</Text>
+                    <Text size="sm" c="var(--color-text-secondary)" lh={1.65}>{app.description}</Text>
+                  </Box>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
 
         </Stack>
       </Container>
@@ -1359,6 +1522,7 @@ export default function LandingPage() {
         <FeaturesSection />
         <UseCasesSection />
         <GlobalVisionSection />
+        <ForecastedImpactSection />
         <RoadmapSection />
         <HowItWorksSection />
         <CtaSection />
