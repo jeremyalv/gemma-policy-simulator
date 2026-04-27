@@ -11,6 +11,7 @@
  *   /compare                       → Policy comparison
  *   /guide                         → User guide
  *   /about                         → About page
+ *   /methodology                   → Methodology disclosure
  *   *                              → 404 → redirect to /
  */
 
@@ -30,6 +31,7 @@ const ChallengePage      = lazy(() => import('@/features/challenge/ChallengePage
 const ComparisonPage     = lazy(() => import('@/features/comparison/ComparisonPage'))
 const GuidePage          = lazy(() => import('@/features/guide/GuidePage'))
 const AboutPage          = lazy(() => import('@/features/about/AboutPage'))
+const MethodologyPage    = lazy(() => import('@/features/methodology/MethodologyPage'))
 
 // ── Dev-only ThemeSwitcher (tree-shaken in production) ────────────────────────
 const ThemeSwitcher = import.meta.env.DEV
@@ -63,6 +65,7 @@ export default function App() {
           <Route path="/compare"                           element={<ErrorBoundary inline><ComparisonPage /></ErrorBoundary>} />
           <Route path="/guide"                             element={<ErrorBoundary inline><GuidePage /></ErrorBoundary>} />
           <Route path="/about"                             element={<ErrorBoundary inline><AboutPage /></ErrorBoundary>} />
+          <Route path="/methodology"                       element={<ErrorBoundary inline><MethodologyPage /></ErrorBoundary>} />
           <Route path="*"                                  element={<Navigate to="/" replace />} />
         </Routes>
 

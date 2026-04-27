@@ -1087,8 +1087,13 @@ function LandingFooter() {
         <Group justify="space-between" wrap="wrap" gap="sm">
           <Text size="xs" c="var(--color-text-tertiary)">InfiniPol · Simulation results are based on synthetic personas and do not represent real individuals.</Text>
           <Group gap="lg">
-            {([{ label: 'Simulations', to: '/simulations' }, { label: 'Guide', to: '/guide' }, { label: 'About', to: '/about' }] as const).map(({ label, to }) => (
-              <Anchor key={to} component={Link} to={to} size="xs" style={{ color: 'var(--color-text-tertiary)', textDecoration: 'none' }}>{label}</Anchor>
+            {([
+              { label: 'Simulations', to: '/simulations' },
+              { label: 'Guide',       to: '/guide' },
+              { label: 'About',       to: '/about' },
+              { label: 'Methodology', to: '/methodology' },
+            ] as const).map(({ label, to }) => (
+              <Anchor key={to} component={Link} to={to} size="xs" style={{ color: label === 'Methodology' ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)', textDecoration: 'none' }}>{label}</Anchor>
             ))}
             <Text size="xs" c="var(--color-text-tertiary)">Synthetic personas: NVIDIA Nemotron-Personas (CC BY 4.0)</Text>
           </Group>

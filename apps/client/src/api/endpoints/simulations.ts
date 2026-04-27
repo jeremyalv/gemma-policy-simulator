@@ -4,7 +4,6 @@
  */
 
 import { api } from '@/api/client'
-import { ApiError } from '@/lib/envelope'
 import { generateIdempotencyKey } from '@/lib/idempotency'
 import type { components } from '@/api/types.gen'
 
@@ -70,14 +69,9 @@ export async function createSimulation(
  * GET /simulations → 200
  * List simulations with pagination and filtering.
  *
- * NOTE: Uses raw fetch() instead of the shared `api` client (apiFetch) because
- * it needs direct access to envelope.meta (total, page, limit) for pagination,
- * which apiFetch currently unwraps away. Consequences:
- *   - Bypasses any middleware added to apiFetch (auth injection, request logging, etc.)
- *   - Has its own error handling path — errors here throw differently from other endpoints
- *   - If apiFetch gains auth headers, this function silently omits them
- * TODO: refactor apiFetch to return { data, meta } instead of unwrapping to data only,
- * then migrate listSimulations to use the shared client like every other endpoint.
+ * Uses api.getWithMeta so envelope.meta (total, page, limit) is accessible
+ * alongside the response data — going through the same shared client as every
+ * other endpoint (auth headers, error normalization, request logging all apply).
  */
 export async function listSimulations(
   params: ListSimulationsParams = {},
@@ -90,45 +84,10 @@ export async function listSimulations(
 
   const qs = query.toString() ? `?${query.toString()}` : ''
 
-  // The backend wraps list in envelope; meta contains pagination
-  // We need to return both data and meta — use apiFetch with raw access
+  const { data, meta } = await api.getWithMeta<SimulationListItem[]>(`/simulations${qs}`)
 
-  // Direct fetch (instead of apiFetch) so we can read envelope.meta for pagination.
-  const url = `${(import.meta.env.VITE_API_BASE_URL ?? '') + '/api/v1'}/simulations${qs}`
-
-  let response: Response
-  try {
-    response = await fetch(url, { headers: { Accept: 'application/json' } })
-  } catch (err) {
-    throw new ApiError('NETWORK_ERROR', `Network request failed: ${(err as Error).message}`, 0)
-  }
-
-  // Parse JSON — guard against empty bodies (e.g. 502/503 HTML pages, MSW not ready)
-  let envelope: Record<string, unknown>
-  try {
-    envelope = await response.json() as Record<string, unknown>
-  } catch {
-    throw new ApiError(
-      'PARSE_ERROR',
-      `Server returned a non-JSON response (HTTP ${response.status}). Is the backend running?`,
-      response.status,
-    )
-  }
-
-  // Application-level error from envelope
-  if (envelope.error) {
-    const errorBody = envelope.error as { code: string; message: string }
-    throw new ApiError(errorBody.code ?? 'API_ERROR', errorBody.message ?? 'Unknown error', response.status)
-  }
-
-  // HTTP-level error with no envelope.error field
-  if (!response.ok) {
-    throw new ApiError('HTTP_ERROR', `Unexpected HTTP ${response.status}`, response.status)
-  }
-
-  const meta = (envelope.meta ?? {}) as Record<string, number>
   return {
-    items: (envelope.data as SimulationListItem[]) ?? [],
+    items: data ?? [],
     total: meta.total ?? 0,
     page:  meta.page  ?? 1,
     limit: meta.limit ?? 20,

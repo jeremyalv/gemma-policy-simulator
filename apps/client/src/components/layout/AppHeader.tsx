@@ -9,11 +9,12 @@ import { Settings, BarChart2 } from 'lucide-react'
 import { useInstitution } from '@/theme/ThemeProvider'
 
 const NAV_LINKS = [
-  { label: 'Simulations', to: '/simulations' },
+  { label: 'Simulations',   to: '/simulations' },
   { label: 'New Simulation', to: '/simulations/new' },
-  { label: 'Compare', to: '/compare' },
-  { label: 'Guide', to: '/guide' },
-  { label: 'About', to: '/about' },
+  { label: 'Compare',       to: '/compare' },
+  { label: 'Guide',         to: '/guide' },
+  { label: 'Methodology',   to: '/methodology' },
+  { label: 'About',         to: '/about' },
 ]
 
 export function AppHeader() {
