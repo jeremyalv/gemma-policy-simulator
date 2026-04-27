@@ -14,6 +14,11 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 import App from './App'
 
+// ── Fonts (fontsource — Vite resolves these as proper assets, no /fonts/ path needed)
+import '@fontsource-variable/source-serif-4'
+import '@fontsource-variable/ibm-plex-sans'
+import '@fontsource-variable/jetbrains-mono'
+
 // ── Mantine CSS — must come before globals so our CSS vars override Mantine defaults
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
