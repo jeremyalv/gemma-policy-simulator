@@ -1371,31 +1371,31 @@ function RoadmapSection() {
 // ── ForecastedImpactSection ───────────────────────────────────────────────────
 
 const IMPACT_METRICS = [
-  { value: '10K+',  label: 'Policies simulated per year by 2027',          sub: 'Across all active markets',                icon: <BarChart2 size={20} />, color: '#0D9488' },
-  { value: '95%',   label: 'Faster than a traditional public consultation', sub: 'From weeks to under 2 minutes',            icon: <Zap size={20} />,       color: '#7C3AED' },
-  { value: '$50K+', label: 'Saved per test vs traditional focus groups',    sub: 'No recruitment, no facilities, no wait',   icon: <TrendingUp size={20} />, color: '#15803D' },
-  { value: '30+',   label: 'Countries covered by end of 2027',             sub: 'Starting with US, Indonesia, India, and EU', icon: <Globe size={20} />,     color: '#0369A1' },
+  { value: '< 2 min', label: 'From policy text to full demographic analysis', sub: 'No recruitment, no scheduling, no fieldwork wait',   icon: <Zap size={20} />,        color: '#0D9488' },
+  { value: '500',     label: 'AI-generated persona reactions per simulation',  sub: 'Adjustable from 20 to 2,000 — runs in minutes',      icon: <BarChart2 size={20} />,  color: '#7C3AED' },
+  { value: '12+',     label: 'Demographic segments broken down per run',       sub: 'Age group, region, income, education and more',      icon: <Globe size={20} />,      color: '#15803D' },
+  { value: 'PDF+CSV', label: 'Export formats included with every simulation',  sub: 'Brief-ready reports and raw data, always available', icon: <TrendingUp size={20} />, color: '#0369A1' },
 ]
 
 const POTENTIAL_APPLICATIONS = [
   {
-    title: 'Government Digital Services',
-    description: 'National and local governments can test proposed legislation against a demographically accurate synthetic population before public consultation opens, reducing the risk of organized backlash.',
+    title: 'Government Policy Teams',
+    description: 'Run AI-assisted reaction analysis on draft legislation before public consultation opens. Identify which demographic segments are most likely to push back — and why — so messaging and policy details can be refined early.',
     icon: <Shield size={18} />, color: '#15803D',
   },
   {
     title: 'Academic Policy Research',
-    description: 'Researchers can generate hypothesis-testing datasets at scale without the cost or timeline of primary data collection, enabling faster publication cycles and more robust pre-registration.',
+    description: 'Screen policy hypotheses and identify which demographic segments warrant deeper survey investment, before committing to primary data collection. Use simulation output as an exploratory framing tool, not a data source.',
     icon: <Microscope size={18} />, color: '#7C3AED',
   },
   {
     title: 'NGO and Advocacy Groups',
-    description: 'Civil society organizations can identify which population segments are most likely to benefit from, or oppose, a proposed intervention, sharpening advocacy and coalition strategy.',
+    description: 'Understand which population segments AI analysis suggests are most likely to support or oppose a proposed intervention. Use the breakdown to sharpen advocacy framing and prioritize coalition outreach.',
     icon: <Users size={18} />, color: '#0369A1',
   },
   {
     title: 'Corporate Compliance and ESG',
-    description: 'Companies developing ESG commitments, workforce policies, or regulatory responses can model public and stakeholder reception before formal announcement, avoiding costly positioning mistakes.',
+    description: 'Stress-test proposed workforce policies, ESG commitments, or regulatory responses against AI-generated stakeholder personas. Catch framing problems and demographic fault lines before formal announcement.',
     icon: <BookOpen size={18} />, color: '#B45309',
   },
 ]
@@ -1422,10 +1422,10 @@ function ForecastedImpactSection() {
           <Stack gap={40} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
             <Stack align="center" gap="sm" style={{ textAlign: 'center' }}>
               <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-                The scale we are building toward
+                What InfiliPol does today
               </Text>
               <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 500 }}>
-                Projected impact by 2027, based on current adoption trajectory and planned expansion.
+                Concrete capabilities — not projections. Every number below is a real product characteristic.
               </Text>
             </Stack>
             <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
@@ -1457,10 +1457,10 @@ function ForecastedImpactSection() {
           <Stack gap={32}>
             <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
               <Text fw={700} style={{ fontSize: '1.6rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-                Where InfiniPol is headed
+                How teams use InfiliPol
               </Text>
               <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
-                Beyond individual policy tests, here are the broader contexts where this platform creates the most value.
+                AI-assisted analysis works best as an early-stage thinking tool — before fieldwork, before publication, before announcement.
               </Text>
             </Stack>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">

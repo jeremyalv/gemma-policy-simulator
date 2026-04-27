@@ -1,8 +1,14 @@
 /**
- * ChallengeDrawer — side drawer that hosts the full challenge loop.
+ * ChallengeDrawer — generates AI adversarial questions about the simulation results.
  * Opened from the floating button on ResultsPage.
  *
- * Contains: FocusPicker → ChallengeDisplay → FollowupDisplay
+ * IMPORTANT: This does NOT re-run the simulation with adversarial framing.
+ * It generates challenge question text for the user to consider — the approval
+ * score shown in results is NOT updated or compared after a challenge round.
+ * TODO (Phase 2): trigger a real re-simulation with adversarial context injected
+ * and display a differential approval score (original range vs. challenged range).
+ *
+ * Current flow: FocusPicker → ChallengeDisplay (text generation) → FollowupDisplay
  * Graceful fallback banner when backend returns 500/501.
  */
 

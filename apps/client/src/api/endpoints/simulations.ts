@@ -69,6 +69,15 @@ export async function createSimulation(
 /**
  * GET /simulations → 200
  * List simulations with pagination and filtering.
+ *
+ * NOTE: Uses raw fetch() instead of the shared `api` client (apiFetch) because
+ * it needs direct access to envelope.meta (total, page, limit) for pagination,
+ * which apiFetch currently unwraps away. Consequences:
+ *   - Bypasses any middleware added to apiFetch (auth injection, request logging, etc.)
+ *   - Has its own error handling path — errors here throw differently from other endpoints
+ *   - If apiFetch gains auth headers, this function silently omits them
+ * TODO: refactor apiFetch to return { data, meta } instead of unwrapping to data only,
+ * then migrate listSimulations to use the shared client like every other endpoint.
  */
 export async function listSimulations(
   params: ListSimulationsParams = {},

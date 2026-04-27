@@ -1,7 +1,12 @@
 /**
  * ApprovalHeatmap — 2D CSS grid heatmap: age groups × approval levels (1–5).
  * Colour is approval-direction-aware: high % at level 1/2 = red, level 4/5 = green.
- * Distribution per row is *estimated* via a Gaussian around mean_approval.
+ *
+ * IMPORTANT: Per-cell percentages are ESTIMATED, not observed.
+ * The backend returns only mean_approval per age group. Cell distributions are
+ * derived via a Gaussian approximation (σ=1.1) around that mean. No individual
+ * persona was ever assigned to a specific approval level in the data.
+ * TODO: request per-persona score data from backend to compute real distributions.
  */
 
 import { Fragment } from 'react'
@@ -167,7 +172,7 @@ export function ApprovalHeatmap({ byAgeGroup }: ApprovalHeatmapProps) {
                 return (
                   <Tooltip
                     key={level}
-                    label={`${group} — ${LEVEL_LABELS[level]}: ~${pct}% of ${count} personas`}
+                    label={`${group}: est. ~${pct}% at "${LEVEL_LABELS[level]}" (Gaussian estimate from mean ${rows.find(r => r.group === group)?.mean.toFixed(1) ?? '?'} — not directly observed per-persona)`}
                     withArrow position="top"
                     styles={{ tooltip: { fontSize: 12 } }}
                   >
@@ -202,10 +207,24 @@ export function ApprovalHeatmap({ byAgeGroup }: ApprovalHeatmapProps) {
         </Box>
       </Box>
 
-      {/* Footer */}
-      <Text size="xs" c="var(--color-text-disabled)" mt={10} lh={1.5}>
-        * Distribution is estimated from mean approval per group using a Gaussian spread (σ=1.1). Individual cell counts are approximate.
-      </Text>
+      {/* Methodology notice — elevated so it is not missed */}
+      <Box
+        mt={12}
+        style={{
+          borderLeft: '3px solid var(--color-border-default)',
+          paddingLeft: 10,
+          backgroundColor: 'var(--color-bg-subtle)',
+          borderRadius: '0 4px 4px 0',
+          padding: '8px 10px',
+        }}
+      >
+        <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>
+          <Text component="span" fw={600} c="var(--color-text-secondary)">Estimated distribution.</Text>{' '}
+          Cell percentages are derived from each group's mean approval score using a Gaussian spread (σ=1.1).
+          They are not directly counted from individual persona responses.
+          Treat these as indicative — not measured breakdowns.
+        </Text>
+      </Box>
     </Box>
   )
 }

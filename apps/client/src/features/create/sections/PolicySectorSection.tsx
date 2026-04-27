@@ -1,7 +1,11 @@
 /**
  * PolicySectorSection — multi-select policy domain/sector picker.
- * 9 domains, 50+ sub-options. Purely UI — values stored in form.sector[].
- * The sector field is NOT sent to the API; it is UI-only context.
+ * 9 domains, 50+ sub-options. Values stored in form.sector[].
+ *
+ * IMPORTANT: sector[] is NOT sent to the API and does NOT affect model output.
+ * It is saved as metadata for the user's own reference and simulation organization.
+ * TODO: wire sector tags to backend context retrieval so they actually influence
+ * which news/polling sources are prioritized during inference.
  */
 
 import { useState } from 'react'
@@ -164,8 +168,9 @@ export function PolicySectorSection({ form }: PolicySectorSectionProps) {
   return (
     <Stack gap="sm">
       <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>
-        Choose the policy domain(s) most relevant to your proposal. This helps contextualise results
-        and guides the simulation focus. Select as many as apply.
+        Tag the policy domain(s) for your own reference and for organizing simulations.
+        These tags are saved with your simulation record — they do not currently affect model output or persona weighting.
+        Select as many as apply.
       </Text>
 
       {selected.length > 0 && (
