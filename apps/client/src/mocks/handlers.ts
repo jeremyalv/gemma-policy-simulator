@@ -206,23 +206,77 @@ export const handlers = [
   }),
 
   // POST /simulations/:id/challenge → 200
-  http.post(`${BASE}/simulations/:id/challenge`, () => {
+  http.post(`${BASE}/simulations/:id/challenge`, async ({ request }) => {
+    const body = await request.json() as { focus?: string }
+    const focus = body.focus ?? 'weak_segment'
+
+    const CHALLENGE_BY_FOCUS: Record<string, {
+      challenge_text: string
+      evidence: { segment: string; mean_approval: number; top_concern: string }
+    }> = {
+      weak_segment: {
+        challenge_text: 'Voters aged 55+ give this policy the lowest approval of any age group at 2.7/5. Their primary concern is the impact on fixed-income households. How does this policy protect people who cannot absorb rising costs?',
+        evidence: {
+          segment: 'Age 55+',
+          mean_approval: 2.7,
+          top_concern: 'Rising costs on fixed incomes with no offset mechanism',
+        },
+      },
+      behavioral_change: {
+        challenge_text: 'The simulation predicts a 34% behavioral shift toward sustainable choices. But in lower-income households, behavioral change is often constrained by affordability, not preference. What makes this prediction realistic for households earning under $40k/year?',
+        evidence: {
+          segment: 'Income under $40k',
+          mean_approval: 3.1,
+          top_concern: 'Predicted behavioral change assumes financial flexibility that many households do not have',
+        },
+      },
+      emotion_bias: {
+        challenge_text: 'Concern is the dominant emotion at 41% across all personas, outweighing hope (22%) and joy (8%). This level of concern in a majority suggests the policy framing is activating risk-aversion rather than opportunity. Why is the policy communicated in a way that generates more worry than optimism?',
+        evidence: {
+          segment: 'All demographics',
+          mean_approval: 3.3,
+          top_concern: 'Policy framing emphasizes cost and restriction over long-term benefit',
+        },
+      },
+      demographic_gap: {
+        challenge_text: 'There is a 1.8-point approval gap between urban voters (3.9/5) and rural voters (2.1/5). Rural communities see this policy as designed for city dwellers and indifferent to their economic realities. How does this policy address the needs of non-urban populations specifically?',
+        evidence: {
+          segment: 'Rural vs. Urban',
+          mean_approval: 2.1,
+          top_concern: 'Policy benefits concentrate in urban areas while rural communities bear disproportionate costs',
+        },
+      },
+    }
+
+    const variant = CHALLENGE_BY_FOCUS[focus] ?? CHALLENGE_BY_FOCUS.weak_segment
+
     return HttpResponse.json(envelope({
       challenge_id: `ch_${Math.random().toString(36).slice(2, 7)}`,
-      challenge_text: 'Voters aged 55+ show approval of only 2.7/5 — the lowest of any age group. Their top concern is increased living costs. How does this policy protect fixed-income households?',
-      evidence: {
-        segment: 'Age 55+',
-        mean_approval: 2.7,
-        top_concern: 'Increased living costs without adequate support mechanisms',
-      },
+      ...variant,
     }))
   }),
 
   // POST /challenges/:id/followup → 200
-  http.post(`${BASE}/challenges/:challenge_id/followup`, () => {
+  http.post(`${BASE}/challenges/:challenge_id/followup`, async ({ request }) => {
+    const body = await request.json() as { user_response?: string }
+    const response = (body.user_response ?? '').toLowerCase()
+
+    // Give slightly different followups based on what the user wrote
+    const isDetailed   = response.length > 80
+    const mentionsData = response.includes('data') || response.includes('evidence') || response.includes('study')
+    const mentionsCost = response.includes('cost') || response.includes('rebate') || response.includes('subsid')
+
+    const followup_text = mentionsData
+      ? 'That evidence-based framing is helpful. But does the data apply specifically to the demographic segments showing the lowest approval, or is it drawn from a broader population that may not represent their situation?'
+      : mentionsCost
+      ? 'The cost mitigation mechanism you describe would address part of the concern. But implementation timeline matters: if relief arrives 18 months after the policy takes effect, how do affected households manage in the interim?'
+      : isDetailed
+      ? 'That is a substantive response. The key question remaining is whether the communities most skeptical of this policy would view those provisions as sufficient, or as peripheral to their core concerns.'
+      : 'That addresses part of the concern. Could you be more specific about which provisions directly protect the segments with the lowest approval, and how they would experience that protection in practice?'
+
     return HttpResponse.json(envelope({
-      followup_text: 'That is a meaningful addition. Would a tiered rebate structure better address income disparities across all vulnerable groups, not just seniors?',
-      suggested_policy_refinement: 'A federal carbon tax of $50/tonne with tiered monthly rebates: households below 150% poverty line receive full rebate, 150–200% receive partial rebate, with special protections for fixed-income seniors via Social Security adjustment.',
+      followup_text,
+      suggested_policy_refinement: 'Consider adding a dedicated support mechanism for the most skeptical demographic segment, with an explicit timeline, eligibility criteria, and a communications strategy that addresses their stated top concern directly.',
       next_challenge_id: `ch_${Math.random().toString(36).slice(2, 7)}`,
     }))
   }),
