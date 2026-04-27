@@ -82,18 +82,6 @@ export function ChallengeDrawer({
     >
       <Stack gap="lg">
 
-        {/* Mock fallback banner */}
-        {flow.isMockFallback && (
-          <Alert
-            icon={<AlertCircle size={14} />}
-            color="yellow"
-            variant="light"
-            style={{ fontSize: 12 }}
-          >
-            Backend challenge endpoint is in development — showing mock response.
-          </Alert>
-        )}
-
         {/* State: picking */}
         {(flow.state === 'idle' || flow.state === 'picking') && (
           <FocusPicker
@@ -157,19 +145,38 @@ export function ChallengeDrawer({
         {flow.state === 'error' && (
           <Alert
             icon={<AlertCircle size={16} />}
-            color="red"
-            title="Challenge failed"
+            color={flow.isMockFallback ? 'orange' : 'red'}
+            title={flow.isMockFallback ? 'Backend not connected' : 'Challenge failed'}
           >
-            <>{flow.error ?? 'Could not generate challenge.'}
-            {' '}
-            <Text
-              size="xs"
-              component="span"
-              style={{ cursor: 'pointer', color: 'var(--color-status-error)', textDecoration: 'underline' }}
-              onClick={flow.retry}
-            >
-              Retry
-            </Text></>
+            <Stack gap={8}>
+              <Text size="sm">
+                {flow.error ?? 'Could not generate challenge.'}
+              </Text>
+              <Group gap={8}>
+                <Text
+                  size="xs"
+                  component="span"
+                  style={{
+                    cursor: 'pointer',
+                    color: flow.isMockFallback
+                      ? 'var(--color-status-warning)'
+                      : 'var(--color-status-error)',
+                    textDecoration: 'underline',
+                  }}
+                  onClick={flow.retry}
+                >
+                  Retry
+                </Text>
+                <Text
+                  size="xs"
+                  component="span"
+                  style={{ cursor: 'pointer', color: 'var(--color-text-tertiary)', textDecoration: 'underline' }}
+                  onClick={handleClose}
+                >
+                  Close
+                </Text>
+              </Group>
+            </Stack>
           </Alert>
         )}
 

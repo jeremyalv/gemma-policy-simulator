@@ -107,14 +107,18 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setState('challenging')
     } catch (err) {
       const apiErr = err as ApiError
-      // Detect backend not yet implemented — MSW will have served mock
-      const isNotImpl = apiErr.httpStatus === 501 ||
-                        apiErr.httpStatus === 500 ||
-                        apiErr.code === 'NOT_IMPLEMENTED'
-      if (isNotImpl) {
-        setMockFallback(true)
-      }
-      setError(apiErr.message ?? 'Failed to generate challenge.')
+      const isBackendDown =
+        apiErr.code === 'PARSE_ERROR' ||
+        apiErr.code === 'NETWORK_ERROR' ||
+        apiErr.httpStatus === 500 ||
+        apiErr.httpStatus === 501 ||
+        apiErr.code === 'NOT_IMPLEMENTED'
+      setMockFallback(isBackendDown)
+      setError(
+        isBackendDown
+          ? 'The challenge endpoint is not responding. Make sure the backend is running.'
+          : (apiErr.message ?? 'Failed to generate challenge.'),
+      )
       setState('error')
     }
   }, [simulationId, selectedFocus])
@@ -135,9 +139,17 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setState('followup')
     } catch (err) {
       const apiErr = err as ApiError
-      const isNotImpl = apiErr.httpStatus === 501 || apiErr.httpStatus === 500
-      if (isNotImpl) setMockFallback(true)
-      setError(apiErr.message ?? 'Failed to submit response.')
+      const isBackendDown =
+        apiErr.code === 'PARSE_ERROR' ||
+        apiErr.code === 'NETWORK_ERROR' ||
+        apiErr.httpStatus === 500 ||
+        apiErr.httpStatus === 501
+      setMockFallback(isBackendDown)
+      setError(
+        isBackendDown
+          ? 'The challenge endpoint is not responding. Make sure the backend is running.'
+          : (apiErr.message ?? 'Failed to submit response.'),
+      )
       setState('error')
     }
   }, [challenge, simulationId])
