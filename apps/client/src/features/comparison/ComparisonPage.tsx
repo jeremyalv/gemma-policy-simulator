@@ -424,9 +424,25 @@ function SlotResultLoader({
   }
 
   if (isError || !results) {
+    const msg = (error as Error)?.message ?? ''
+    const isBackendDown =
+      msg.includes('non-JSON') ||
+      msg.includes('PARSE_ERROR') ||
+      msg.includes('NETWORK_ERROR') ||
+      msg.includes('backend')
+
     return (
-      <Alert icon={<AlertCircle size={14} />} color="red" variant="light">
-        {(error as Error)?.message ?? 'Could not load results. Simulation may not be complete.'}
+      <Alert icon={<AlertCircle size={14} />} color="orange" variant="light">
+        <Stack gap={6}>
+          <Text size="sm">
+            {isBackendDown
+              ? 'The API server is not responding. Make sure the backend is running.'
+              : 'Could not load results. The simulation may still be running or may have failed.'}
+          </Text>
+          <Text size="xs" c="var(--color-text-tertiary)">
+            Only completed simulations can be compared.
+          </Text>
+        </Stack>
       </Alert>
     )
   }

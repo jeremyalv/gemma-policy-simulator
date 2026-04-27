@@ -24,10 +24,19 @@ export function useRunSimulation() {
       navigate(`/simulations/${id}`)
     },
 
-    onError: () => {
+    onError: (error: unknown) => {
+      const msg = (error as Error)?.message ?? ''
+      const isBackendDown =
+        msg.includes('non-JSON') ||
+        msg.includes('PARSE_ERROR') ||
+        msg.includes('NETWORK_ERROR') ||
+        msg.includes('backend')
+
       notifications.show({
         title: 'Run failed',
-        message: 'Could not start simulation. Please try again.',
+        message: isBackendDown
+          ? 'The API server is not responding. Make sure the backend is running, then try again.'
+          : 'Could not start the simulation. Please try again.',
         color: 'red',
       })
     },

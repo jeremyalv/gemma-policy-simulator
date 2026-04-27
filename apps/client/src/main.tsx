@@ -51,10 +51,15 @@ const queryClient = new QueryClient({
 })
 
 // ── Mock Service Worker ───────────────────────────────────────────────────────
-
-const useMocks =
-  import.meta.env.VITE_USE_MOCKS === 'true' ||
-  (import.meta.env.VITE_USE_MOCKS === undefined && import.meta.env.DEV)
+//
+// Mocks are ACTIVE by default — in both dev and production builds.
+// This ensures the app works out of the box without a real backend running.
+//
+// To disable mocks and use a real backend, set VITE_USE_MOCKS=false in
+// your .env.production.local or CI/CD environment at build time:
+//   VITE_USE_MOCKS=false VITE_API_BASE_URL=https://api.example.com vite build
+//
+const useMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
 
 async function prepare(): Promise<void> {
   if (useMocks) {
