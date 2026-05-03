@@ -17,7 +17,7 @@
 import { useState, useCallback } from 'react'
 import { generateChallenge, submitChallengeFollowup } from '@/api'
 import type { ChallengeData, ChallengeFollowupData } from '@/api'
-import type { ApiError } from '@/lib/envelope'
+import { isBackendDownError } from '@/lib/api-errors'
 
 export type ChallengeFlowState =
   | 'idle'
@@ -110,18 +110,12 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setChallenge(data)
       setState('challenging')
     } catch (err) {
-      const apiErr = err as ApiError
-      const isBackendDown =
-        apiErr.code === 'PARSE_ERROR' ||
-        apiErr.code === 'NETWORK_ERROR' ||
-        apiErr.httpStatus === 500 ||
-        apiErr.httpStatus === 501 ||
-        apiErr.code === 'NOT_IMPLEMENTED'
+      const isBackendDown = isBackendDownError(err)
       setMockFallback(isBackendDown)
       setError(
         isBackendDown
           ? 'The challenge endpoint is not responding. Make sure the backend is running.'
-          : (apiErr.message ?? 'Failed to generate challenge.'),
+          : (err instanceof Error ? err.message : 'Failed to generate challenge.'),
       )
       setState('error')
     }
@@ -142,17 +136,12 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setFollowup(data)
       setState('followup')
     } catch (err) {
-      const apiErr = err as ApiError
-      const isBackendDown =
-        apiErr.code === 'PARSE_ERROR' ||
-        apiErr.code === 'NETWORK_ERROR' ||
-        apiErr.httpStatus === 500 ||
-        apiErr.httpStatus === 501
+      const isBackendDown = isBackendDownError(err)
       setMockFallback(isBackendDown)
       setError(
         isBackendDown
           ? 'The challenge endpoint is not responding. Make sure the backend is running.'
-          : (apiErr.message ?? 'Failed to submit response.'),
+          : (err instanceof Error ? err.message : 'Failed to submit response.'),
       )
       setState('error')
     }

@@ -17,7 +17,7 @@ import { AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react'
 
 const METHODOLOGY_VERSION = '1.0'
 const LAST_UPDATED = 'April 2026'
-const SCOPE = 'US English-language policy — Phase 1'
+const SCOPE = 'US English-language policy (Phase 1)'
 
 // ── Section helper ────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export default function MethodologyPage() {
             </Text>
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7} style={{ maxWidth: '60ch' }}>
               This page explains exactly what InfiniPol does under the hood, what it is designed
-              to help with, and — equally important — what it cannot do and should never be
+              to help with, and (equally important) what it cannot do and should never be
               used for. We update this document whenever the methodology changes.
             </Text>
           </Stack>
@@ -114,8 +114,8 @@ export default function MethodologyPage() {
           <Section title="What InfiniPol is">
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
               InfiniPol is an <strong>AI-assisted policy reaction analysis tool</strong>. When you
-              submit a policy proposal, it generates a set of synthetic personas — fictional
-              individuals with defined demographic attributes — and uses a large language model
+              submit a policy proposal, it generates a set of synthetic personas (fictional
+              individuals with defined demographic attributes) and uses a large language model
               (LLM) to simulate how each persona might react to the policy text.
             </Text>
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
@@ -127,7 +127,7 @@ export default function MethodologyPage() {
             </Text>
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
               Think of it as a fast, low-cost <strong>thinking aid</strong> for early-stage policy
-              development — not a substitute for real fieldwork.
+              development, not a substitute for real fieldwork.
             </Text>
           </Section>
 
@@ -143,7 +143,7 @@ export default function MethodologyPage() {
               </Bullet>
               <Bullet icon={<AlertTriangle size={15} />} color="var(--color-status-warning)">
                 <strong>Not a statistically valid sample.</strong> The "sample size" setting
-                controls how many AI inference passes are run — it affects output variance,
+                controls how many AI inference passes are run. It affects output variance,
                 not representational accuracy. A run of n=2,000 AI personas is not equivalent
                 to a survey of n=2,000 real respondents.
               </Bullet>
@@ -215,7 +215,7 @@ export default function MethodologyPage() {
             >
               <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
                 <strong>Current limitation:</strong> Each simulation produces a single point
-                estimate. LLMs are stochastic — running the same simulation twice will produce
+                estimate. LLMs are stochastic, so running the same simulation twice will produce
                 slightly different scores. In Phase 2, each simulation will run multiple
                 inference passes and return a score range (e.g. 58–64%) instead of a single
                 number, making uncertainty explicit.
@@ -224,7 +224,7 @@ export default function MethodologyPage() {
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
               The <strong>Estimated Approval Distribution heatmap</strong> shows approximate
               per-demographic breakdowns. These are derived from each segment's mean approval
-              using a Gaussian distribution (σ=1.1) — they are estimates, not directly observed
+              using a Gaussian distribution (σ=1.1). They are estimates, not directly observed
               per-persona counts.
             </Text>
           </Section>
@@ -234,7 +234,7 @@ export default function MethodologyPage() {
           {/* ── Data sources ─────────────────────────────────────────────── */}
           <Section title="Data sources (Phase 1 vs. Phase 2)">
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="var(--color-text-primary)">Phase 1 — Current</Text>
+              <Text size="sm" fw={600} c="var(--color-text-primary)">Phase 1: Current</Text>
               <Bullet icon={<Info size={15} />} color="var(--color-status-info)">
                 Persona reactions are generated entirely from the language model's training
                 priors. No external news, polling, or demographic datasets are injected at
@@ -246,19 +246,19 @@ export default function MethodologyPage() {
               </Bullet>
             </Stack>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="var(--color-text-primary)">Phase 2 — Planned</Text>
+              <Text size="sm" fw={600} c="var(--color-text-primary)">Phase 2: Planned</Text>
               <Bullet icon={<RefreshCw size={15} />} color="var(--color-text-tertiary)">
-                Real-time news context injection (GDELT / NewsAPI) — top recent articles
+                Real-time news context injection (GDELT / NewsAPI): top recent articles
                 relevant to the policy topic will be retrieved and injected into every
                 simulation prompt, anchoring reactions to current events.
               </Bullet>
               <Bullet icon={<RefreshCw size={15} />} color="var(--color-text-tertiary)">
-                Polling data grounding — relevant published survey results (Pew Research,
+                Polling data grounding: relevant published survey results (Pew Research,
                 Gallup, YouGov US) will be retrieved and surfaced alongside simulation output,
                 so you can compare AI-generated reactions with real polling benchmarks.
               </Bullet>
               <Bullet icon={<RefreshCw size={15} />} color="var(--color-text-tertiary)">
-                Census-weighted persona sampling — US Census Bureau demographic distributions
+                Census-weighted persona sampling: US Census Bureau demographic distributions
                 will be used to generate personas in accurate population proportions.
               </Bullet>
             </Stack>
@@ -271,7 +271,7 @@ export default function MethodologyPage() {
             <Text size="sm" c="var(--color-text-secondary)" lh={1.7}>
               The sector tags (Healthcare, Climate, Economy, etc.) selected during simulation
               creation are saved with your simulation record for your own reference and
-              organization. In Phase 1 they <strong>do not affect model output</strong> —
+              organization. In Phase 1 they <strong>do not affect model output</strong>;
               the model does not receive sector context separately from the policy text itself.
               In Phase 2, sector tags will be used to bias context retrieval toward the most
               relevant news and polling sources.
@@ -284,19 +284,19 @@ export default function MethodologyPage() {
           <Section title="Recommended uses">
             <Stack gap="sm">
               <Bullet icon={<CheckCircle size={15} />} color="var(--color-status-success)">
-                Early-stage policy exploration — understanding potential friction points before
+                Early-stage policy exploration: understanding potential friction points before
                 commissioning survey fieldwork.
               </Bullet>
               <Bullet icon={<CheckCircle size={15} />} color="var(--color-status-success)">
-                Internal briefing preparation — generating a structured first-pass reaction
+                Internal briefing preparation: generating a structured first-pass reaction
                 analysis to share with stakeholders before publication.
               </Bullet>
               <Bullet icon={<CheckCircle size={15} />} color="var(--color-status-success)">
-                Framing stress-testing — comparing how different phrasings of the same policy
+                Framing stress-testing: comparing how different phrasings of the same policy
                 shift simulated demographic reactions.
               </Bullet>
               <Bullet icon={<CheckCircle size={15} />} color="var(--color-status-success)">
-                Teaching and training — political science or public policy courses exploring
+                Teaching and training: political science or public policy courses exploring
                 how demographic factors shape policy reception.
               </Bullet>
             </Stack>

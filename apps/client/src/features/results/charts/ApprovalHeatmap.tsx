@@ -172,7 +172,7 @@ export function ApprovalHeatmap({ byAgeGroup }: ApprovalHeatmapProps) {
                 return (
                   <Tooltip
                     key={level}
-                    label={`${group}: est. ~${pct}% at "${LEVEL_LABELS[level]}" (Gaussian estimate from mean ${rows.find(r => r.group === group)?.mean.toFixed(1) ?? '?'} — not directly observed per-persona)`}
+                    label={`${group}: est. ~${pct}% at "${LEVEL_LABELS[level]}" (Gaussian estimate from mean ${mean.toFixed(1)}, not directly observed per-persona)`}
                     withArrow position="top"
                     styles={{ tooltip: { fontSize: 12 } }}
                   >

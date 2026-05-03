@@ -17,6 +17,7 @@ import {
   Badge, Progress, SimpleGrid, Card,
 } from '@mantine/core'
 import { ArrowLeft, AlertCircle, GitCompare, TrendingUp, RefreshCw, BookOpen, ChevronRight, X } from 'lucide-react'
+import { isBackendDownError } from '@/lib/api-errors'
 import { Layout }               from '@/components/layout/Layout'
 import { ApprovalGauge }        from '@/features/results/charts/ApprovalGauge'
 import { useSimulations }       from '@/features/dashboard/hooks/useSimulations'
@@ -424,13 +425,7 @@ function SlotResultLoader({
   }
 
   if (isError || !results) {
-    const msg = (error as Error)?.message ?? ''
-    const isBackendDown =
-      msg.includes('non-JSON') ||
-      msg.includes('PARSE_ERROR') ||
-      msg.includes('NETWORK_ERROR') ||
-      msg.includes('backend')
-
+    const isBackendDown = isBackendDownError(error)
     return (
       <Alert icon={<AlertCircle size={14} />} color="orange" variant="light">
         <Stack gap={6}>

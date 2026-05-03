@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { runSimulation } from '@/api'
 import { notifications } from '@mantine/notifications'
+import { isBackendDownError, BACKEND_DOWN_MESSAGE } from '@/lib/api-errors'
 import { SIMULATIONS_QUERY_KEY } from './useSimulations'
 
 export function useRunSimulation() {
@@ -25,17 +26,10 @@ export function useRunSimulation() {
     },
 
     onError: (error: unknown) => {
-      const msg = (error as Error)?.message ?? ''
-      const isBackendDown =
-        msg.includes('non-JSON') ||
-        msg.includes('PARSE_ERROR') ||
-        msg.includes('NETWORK_ERROR') ||
-        msg.includes('backend')
-
       notifications.show({
         title: 'Run failed',
-        message: isBackendDown
-          ? 'The API server is not responding. Make sure the backend is running, then try again.'
+        message: isBackendDownError(error)
+          ? BACKEND_DOWN_MESSAGE
           : 'Could not start the simulation. Please try again.',
         color: 'red',
       })

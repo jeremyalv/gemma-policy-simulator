@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { runSimulation } from '@/api'
 import { generateIdempotencyKey } from '@/lib/idempotency'
+import { isBackendDownError, BACKEND_DOWN_MESSAGE } from '@/lib/api-errors'
 import { notifications } from '@mantine/notifications'
 import { PolicyPanel }  from './PolicyPanel'
 import { ChatBubble }   from './ChatBubble'
@@ -89,16 +90,10 @@ export default function ClarificationPage() {
       )
       navigate(`/simulations/${simulationId}`)
     } catch (err) {
-      const msg = (err as Error)?.message ?? ''
-      const isBackendDown =
-        msg.includes('non-JSON') ||
-        msg.includes('PARSE_ERROR') ||
-        msg.includes('NETWORK_ERROR') ||
-        msg.includes('backend')
       notifications.show({
         title: 'Run failed',
-        message: isBackendDown
-          ? 'The API server is not responding. Make sure the backend is running, then try again.'
+        message: isBackendDownError(err)
+          ? BACKEND_DOWN_MESSAGE
           : 'Could not start simulation. Please try again.',
         color: 'red',
       })

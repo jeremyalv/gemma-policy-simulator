@@ -22,6 +22,54 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
 }
 
 /**
+ * Internal: build headers, body, and execute the network request.
+ * Throws ApiError('NETWORK_ERROR') on transport failures.
+ * Caller is responsible for parsing the response.
+ */
+async function executeRequest(
+  path: string,
+  options: FetchOptions,
+): Promise<Response> {
+  const { json, idempotencyKey, ...rest } = options
+  const rawBody = (options as RequestInit).body
+
+  const headers = new Headers(rest.headers)
+  headers.set('Accept', 'application/json')
+  if (json !== undefined) headers.set('Content-Type', 'application/json')
+  if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey)
+
+  try {
+    return await fetch(`${API_BASE}${path}`, {
+      ...rest,
+      headers,
+      body: json !== undefined ? JSON.stringify(json) : rawBody,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new ApiError('NETWORK_ERROR', `Network request failed: ${message}`, 0)
+  }
+}
+
+/**
+ * Internal: parse a Response body as a JSON envelope.
+ * Throws ApiError('PARSE_ERROR') if the body is not JSON.
+ */
+async function parseEnvelope<T>(
+  response: Response,
+  path: string,
+): Promise<AnyEnvelope<T>> {
+  try {
+    return await response.json() as AnyEnvelope<T>
+  } catch {
+    throw new ApiError(
+      'PARSE_ERROR',
+      `Unexpected non-JSON response from ${path}`,
+      response.status,
+    )
+  }
+}
+
+/**
  * Core fetch function — always returns unwrapped data T.
  * Throws ApiError on any failure.
  */
@@ -29,25 +77,7 @@ export async function apiFetch<T>(
   path: string,
   options: FetchOptions = {},
 ): Promise<T> {
-  const { json, idempotencyKey, ...rest } = options
-  const rawBody = (options as RequestInit).body
-
-  const headers = new Headers(rest.headers)
-  headers.set('Accept', 'application/json')
-
-  if (json !== undefined) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  if (idempotencyKey) {
-    headers.set('Idempotency-Key', idempotencyKey)
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...rest,
-    headers,
-    body: json !== undefined ? JSON.stringify(json) : rawBody,
-  })
+  const response = await executeRequest(path, options)
 
   // CSV export endpoint returns raw text — handle separately
   if (response.headers.get('Content-Type')?.includes('text/csv')) {
@@ -57,18 +87,7 @@ export async function apiFetch<T>(
     return response as unknown as T
   }
 
-  // All other responses are JSON envelope
-  let envelope: AnyEnvelope<T>
-  try {
-    envelope = await response.json() as AnyEnvelope<T>
-  } catch {
-    throw new ApiError(
-      'PARSE_ERROR',
-      `Unexpected non-JSON response from ${path}`,
-      response.status,
-    )
-  }
-
+  const envelope = await parseEnvelope<T>(response, path)
   return unwrap(envelope, response.status)
 }
 
@@ -83,34 +102,8 @@ export async function apiFetchWithMeta<T>(
   path: string,
   options: FetchOptions = {},
 ): Promise<{ data: T; meta: ApiMeta }> {
-  const { json, idempotencyKey, ...rest } = options
-
-  const headers = new Headers(rest.headers)
-  headers.set('Accept', 'application/json')
-  if (json !== undefined) headers.set('Content-Type', 'application/json')
-  if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey)
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      ...rest,
-      headers,
-      body: json !== undefined ? JSON.stringify(json) : (options as RequestInit).body,
-    })
-  } catch (err) {
-    throw new ApiError('NETWORK_ERROR', `Network request failed: ${(err as Error).message}`, 0)
-  }
-
-  let envelope: AnyEnvelope<T>
-  try {
-    envelope = await response.json() as AnyEnvelope<T>
-  } catch {
-    throw new ApiError(
-      'PARSE_ERROR',
-      `Unexpected non-JSON response from ${path}`,
-      response.status,
-    )
-  }
+  const response = await executeRequest(path, options)
+  const envelope = await parseEnvelope<T>(response, path)
 
   if (envelope.error !== null) {
     throw new ApiError(
