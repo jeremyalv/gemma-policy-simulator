@@ -86,7 +86,11 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
   const [isMockFallback, setMockFallback]  = useState(false)
 
   // ── Open / close ──────────────────────────────────────────────────────────
-  const open  = useCallback(() => { setState('picking'); setError(null) }, [])
+  const open  = useCallback(() => {
+    setState('picking')
+    setError(null)
+    setMockFallback(false)
+  }, [])
   const close = useCallback(() => { setState('idle') }, [])
 
   // ── Select focus ──────────────────────────────────────────────────────────
@@ -160,12 +164,15 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
     setChallenge(null)
     setFollowup(null)
     setSelectedFocus(null)
+    setError(null)
+    setMockFallback(false)
     setState('picking')
   }, [])
 
   // ── Retry ─────────────────────────────────────────────────────────────────
   const retry = useCallback(() => {
     setError(null)
+    setMockFallback(false)
     if (challenge) setState('challenging')
     else setState('picking')
   }, [challenge])

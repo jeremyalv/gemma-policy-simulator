@@ -1245,7 +1245,7 @@ const ROADMAP = [
     phase: 'Foundation',
     quarter: 'Now',
     title: 'United States (Live)',
-    description: '300,000+ NVIDIA Nemotron personas across all 50 US states. Census-aligned by age, sex, education, occupation, marital status, and location. The reference market for evidence-based policy testing.',
+    description: '300,000+ NVIDIA Nemotron personas across all 50 US states. Census-aligned by age, sex, education, occupation, marital status, and location. The reference market for AI-assisted policy reaction analysis.',
     justification: 'The US has the richest open synthetic persona dataset available, a mature policy research ecosystem, and the highest demand for pre-rollout public reaction modeling. It is the natural starting point.',
     icon: <CheckCircle size={16} />,
     color: '#15803D',

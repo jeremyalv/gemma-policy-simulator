@@ -281,6 +281,30 @@ export const handlers = [
     }))
   }),
 
+  // GET /simulations/:id/export → 200 (CSV — NOT JSON envelope)
+  http.get(`${BASE}/simulations/:id/export`, ({ params }) => {
+    const id = params.id as string
+    const csv = [
+      'persona_id,age_group,region,income_bracket,education,approval_score,emotion,quote',
+      `p001,25-34,Northeast,middle,bachelor,4,hope,"Generally positive about this policy direction."`,
+      `p002,55-64,South,low,high_school,2,concern,"Worried about the cost impact on fixed incomes."`,
+      `p003,35-44,West,high,graduate,5,joy,"Long overdue and well-designed."`,
+      `p004,18-24,Midwest,low,some_college,3,neutral,"Need more details before forming an opinion."`,
+      `p005,45-54,South,middle,bachelor,2,anger,"This will hurt the people it claims to help."`,
+      `# Export for simulation ${id}`,
+      `# Generated at ${new Date().toISOString()}`,
+      `# This is mock data from MSW. A real export would contain all sampled personas.`,
+    ].join('\n')
+
+    return new HttpResponse(csv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="infinipol-${id}-results.csv"`,
+      },
+    })
+  }),
+
   // GET /datasets → 200
   http.get(`${BASE}/datasets`, () => {
     return HttpResponse.json(envelope([
