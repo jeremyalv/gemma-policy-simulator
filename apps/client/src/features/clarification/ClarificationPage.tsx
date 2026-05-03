@@ -58,9 +58,13 @@ export default function ClarificationPage() {
     onComplete: handleComplete,
   })
 
-  // Start flow on mount
+  // Start flow on mount.
+  // Guard against React.StrictMode double-invocation (which would waste an
+  // API call and reset the chat to a blank state for a moment).
+  const startedRef = useRef(false)
   useEffect(() => {
-    if (simulationId) {
+    if (simulationId && !startedRef.current) {
+      startedRef.current = true
       flow.start(GENERATE_FOCUS)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -114,6 +114,7 @@ export function SimulationRow({
                 variant="subtle"
                 size="sm"
                 loading={isRunning}
+                disabled={isRunning || isDeleting}
                 onClick={() => onRun(id)}
                 style={{ color: 'var(--color-accent-primary)' }}
                 aria-label="Run"

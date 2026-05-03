@@ -45,12 +45,19 @@ export function useCreateSimulation() {
       )
     },
 
-    onSuccess: (sim: SimulationDraft, { options }) => {
+    onSuccess: (sim: SimulationDraft, { values, options }) => {
       // Invalidate dashboard list so new sim appears immediately
       queryClient.invalidateQueries({ queryKey: SIMULATIONS_QUERY_KEY })
 
       if (options.withClarification) {
-        navigate(`/simulations/${sim.id}/clarify`)
+        // Pass policy context via location.state so ClarificationPage can render
+        // the policy panel without re-fetching the simulation draft
+        navigate(`/simulations/${sim.id}/clarify`, {
+          state: {
+            title:       values.title,
+            policy_text: values.policy_text,
+          },
+        })
       } else {
         navigate(`/simulations/${sim.id}`)
       }

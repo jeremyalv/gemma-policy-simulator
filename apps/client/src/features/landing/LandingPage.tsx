@@ -707,13 +707,24 @@ function TryItSection() {
     setResult(null)
   }
 
+  // Track the in-flight simulate timer so we can clear it on unmount or
+  // when a new simulation starts (prevents state-update-after-unmount warnings)
+  const simulateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => {
+      if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current)
+    }
+  }, [])
+
   const handleSimulate = () => {
     if (!text.trim() || phase === 'thinking') return
     setPhase('thinking')
     setResult(null)
-    setTimeout(() => {
+    if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current)
+    simulateTimerRef.current = setTimeout(() => {
       setResult(scoreFromText(text))
       setPhase('done')
+      simulateTimerRef.current = null
     }, 1600)
   }
 

@@ -343,6 +343,7 @@ export default function CreatePage() {
                     <Button
                       leftSection={<Play size={15} />}
                       loading={isPending}
+                      disabled={isPending}
                       onClick={() => handleSubmit(false)}
                       style={{
                         backgroundColor: 'var(--color-accent-primary)',
@@ -357,6 +358,7 @@ export default function CreatePage() {
                       variant="outline"
                       leftSection={<MessageSquare size={15} />}
                       loading={isPending}
+                      disabled={isPending}
                       onClick={() => handleSubmit(true)}
                       style={{
                         borderColor: 'var(--color-accent-primary)',

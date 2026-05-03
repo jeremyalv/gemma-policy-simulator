@@ -3,7 +3,7 @@
  * Data: GET /simulations (MSW mock: 12 items, varied statuses)
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Group, Title, Button, Text, Box,
@@ -49,8 +49,14 @@ export default function DashboardPage() {
   const [runningId,  setRunningId]  = useState<string | null>(null)
 
   const filtered  = useMemo(() => applyFilters(simulations, filter), [simulations, filter])
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // Clamp current page when totalPages shrinks (e.g. after deleting the last
+  // item on the current page, or when filters narrow the result set).
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   // Reset to page 1 when filter changes
   function handleFilterChange(next: FilterState) {
