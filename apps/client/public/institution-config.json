@@ -1,12 +1,12 @@
 {
-  "_comment": "Institution configuration — edit this file to customise SIMS for your organisation. No rebuild required.",
+  "_comment": "Institution configuration — edit this file to customise InfiniPol for your organisation. No rebuild required.",
   "_version": "1",
 
-  "name": "SIMS Policy Simulator",
-  "short_name": "SIMS",
-  "tagline": "Simulate public response to policy before it goes live.",
-  "logo_url": "/logos/sims-logo.svg",
-  "favicon_url": "/favicon.ico",
+  "name": "InfiniPol",
+  "short_name": "InfiniPol",
+  "tagline": "Infinite Policy Testing: simulate public response before it goes live.",
+  "logo_url": "/logos/infinipol-logo.svg",
+  "favicon_url": "/favicon/favicon.svg",
 
   "theme": "global-default",
 
@@ -27,5 +27,5 @@
 
   "default_dataset": "nemotron_usa",
 
-  "footer_note": "Powered by SIMS · Synthetic personas from NVIDIA Nemotron-Personas (CC BY 4.0)"
+  "footer_note": "InfiniPol · Synthetic personas from NVIDIA Nemotron-Personas (CC BY 4.0)"
 }

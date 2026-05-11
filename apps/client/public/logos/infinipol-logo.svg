@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 32" width="44" height="32" role="img" aria-label="InfiniPol">
+  <!-- Horizontal bar chart mark: 4 bars of varying heights, bottom-aligned -->
+  <!-- Heights proportional to original icon design (12 : 22 : 30 : 20) -->
+  <rect x="0"  y="21" width="7" height="11" fill="#D4A24C"/>
+  <rect x="10" y="11" width="7" height="21" fill="#0B1F3A"/>
+  <rect x="20" y="3"  width="7" height="29" fill="#0B1F3A"/>
+  <rect x="30" y="14" width="7" height="18" fill="#0B1F3A"/>
+</svg>
