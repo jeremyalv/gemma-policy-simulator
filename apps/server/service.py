@@ -23,6 +23,7 @@ from packages.contracts.python.contracts_v1 import (
     GenerateClarificationRequest,
     RunAcceptedEnvelope,
     RunSimulationRequest,
+    SimulationResultsEnvelope,
     SimulationStatusEnvelope,
     SimulationDraft,
     SimulationListEnvelope,
@@ -35,6 +36,7 @@ from .clarification_generator import (
     generate_clarification_with_gemma,
 )
 from .errors import ApiError
+from .results_aggregator import aggregate_results_payload
 from .simulation_runner import (
     SimulationRunError,
     build_policy_prompt,
@@ -763,6 +765,87 @@ def get_simulation_status(store: SimulationStore, simulation_id: str) -> Simulat
                 "effective_sample_size": agents_total,
                 "run_telemetry": _status_run_telemetry(simulation),
             },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def get_simulation_results(store: SimulationStore, simulation_id: str) -> SimulationResultsEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    status = cast(str, simulation["status"])
+    if status in {"pending", "running"}:
+        raise ApiError(
+            code="SIMULATION_NOT_COMPLETE",
+            message="results are only available after simulation completion",
+            status_code=409,
+        )
+    if status == "failed":
+        raise ApiError(
+            code="SIMULATION_FAILED",
+            message="simulation failed; results are unavailable",
+            status_code=409,
+        )
+    if status != "completed":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message=f"unsupported lifecycle status for results: {status}",
+            status_code=409,
+        )
+
+    artifact_path = run_artifact_path(simulation_id)
+    if not artifact_path.exists():
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"missing run artifact for completed simulation: {simulation_id}",
+            status_code=500,
+        )
+
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"invalid run artifact JSON for simulation: {simulation_id}",
+            status_code=500,
+        ) from exc
+
+    raw_outputs = artifact.get("raw_outputs")
+    if not isinstance(raw_outputs, list):
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"run artifact missing raw_outputs for simulation: {simulation_id}",
+            status_code=500,
+        )
+
+    runtime_profile = _resolve_runtime_profile(simulation)
+    effective_sample_size = _resolve_agents_total(simulation) or len(raw_outputs)
+
+    try:
+        data = aggregate_results_payload(
+            simulation_id=simulation_id,
+            runtime_profile=runtime_profile,
+            effective_sample_size=effective_sample_size,
+            raw_outputs=cast(list[dict[str, Any]], raw_outputs),
+        )
+    except ValueError as exc:
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"invalid run artifact contents for simulation: {simulation_id}",
+            status_code=500,
+        ) from exc
+
+    return cast(
+        SimulationResultsEnvelope,
+        {
+            "data": data,
             "error": None,
             "meta": {"request_id": new_request_id()},
         },

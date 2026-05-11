@@ -266,6 +266,11 @@ Response `200`:
 }
 ```
 
+Error responses:
+- `404 NOT_FOUND` when the simulation id does not exist.
+- `409 SIMULATION_NOT_COMPLETE` when status is `pending` or `running`.
+- `409 SIMULATION_FAILED` when status is `failed`.
+
 ### GET `/simulations`
 List all simulations (history view).
 
