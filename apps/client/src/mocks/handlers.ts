@@ -69,12 +69,20 @@ const TELEMETRY_FAILED = {
   failed_persona_id: 'p_00312',
 }
 
+interface MockTelemetry {
+  retry_count: number
+  invalid_output_count: number
+  failure_code: string | null
+  failure_message: string | null
+  failed_persona_id: string | null
+}
+
 function makeStatusPayload(
   id: string,
   status: string,
   pct: number,
   etaSeconds: number,
-  telemetry = TELEMETRY_OK,
+  telemetry: MockTelemetry = TELEMETRY_OK,
 ) {
   return {
     id,
