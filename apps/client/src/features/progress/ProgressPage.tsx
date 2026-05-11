@@ -216,6 +216,7 @@ export default function ProgressPage() {
   const pct         = d?.progress_pct ?? 0
   const isFailed    = status === 'failed'
   const isCompleted = status === 'completed'
+  const telemetry   = d?.run_telemetry ?? null
 
   return (
     <Layout maxWidth="sm">
@@ -270,9 +271,44 @@ export default function ProgressPage() {
                 title="Simulation failed"
                 style={{ borderColor: 'var(--color-status-error)' }}
               >
-                The simulation encountered an error. This may be due to a
-                backend issue or resource timeout. You can retry below.
+                {telemetry?.failure_message
+                  ? telemetry.failure_message
+                  : 'The simulation encountered an error. This may be due to a backend issue or resource timeout. You can retry below.'}
               </Alert>
+            )}
+
+            {/* ── Run telemetry (failure details) ───────────────── */}
+            {isFailed && telemetry && (telemetry.failure_code || telemetry.retry_count > 0) && (
+              <Box
+                style={{
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  borderLeft: '3px solid var(--color-status-error)',
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  gap: '3px 14px',
+                  alignItems: 'start',
+                }}
+              >
+                <Text size="xs" c="var(--color-text-tertiary)" fw={600} style={{ gridColumn: '1 / -1', marginBottom: 4 }}>Failure details</Text>
+                {telemetry.failure_code && (
+                  <>
+                    <Text size="xs" c="var(--color-text-tertiary)">Code</Text>
+                    <Text size="xs" fw={500} c="var(--color-text-secondary)" style={{ fontFamily: 'monospace' }}>{telemetry.failure_code}</Text>
+                  </>
+                )}
+                {telemetry.failed_persona_id && (
+                  <>
+                    <Text size="xs" c="var(--color-text-tertiary)">Persona</Text>
+                    <Text size="xs" fw={500} c="var(--color-text-secondary)" style={{ fontFamily: 'monospace' }}>{telemetry.failed_persona_id}</Text>
+                  </>
+                )}
+                <Text size="xs" c="var(--color-text-tertiary)">Retries</Text>
+                <Text size="xs" fw={500} c="var(--color-text-secondary)">{telemetry.retry_count}</Text>
+                <Text size="xs" c="var(--color-text-tertiary)">Invalid outputs</Text>
+                <Text size="xs" fw={500} c="var(--color-text-secondary)">{telemetry.invalid_output_count}</Text>
+              </Box>
             )}
 
             {/* ── Progress bar ──────────────────────────────────── */}

@@ -51,11 +51,30 @@ const DEMO_TERMINAL: Record<string, 'completed' | 'failed' | 'pending'> = {
 /** Demo simulations complete in 30 seconds from first status poll or POST /run. */
 const DEMO_DURATION_MS = 30_000
 
+/** Default run_telemetry for healthy / in-progress simulations. */
+const TELEMETRY_OK = {
+  retry_count: 0,
+  invalid_output_count: 0,
+  failure_code: null,
+  failure_message: null,
+  failed_persona_id: null,
+}
+
+/** run_telemetry shape for simulations that failed during inference. */
+const TELEMETRY_FAILED = {
+  retry_count: 3,
+  invalid_output_count: 2,
+  failure_code: 'INFERENCE_TIMEOUT',
+  failure_message: 'Ollama inference timed out after 3 retries for persona p_00312.',
+  failed_persona_id: 'p_00312',
+}
+
 function makeStatusPayload(
   id: string,
   status: string,
   pct: number,
   etaSeconds: number,
+  telemetry = TELEMETRY_OK,
 ) {
   return {
     id,
@@ -66,6 +85,7 @@ function makeStatusPayload(
     estimated_seconds_remaining: etaSeconds,
     runtime_profile: 'balanced',
     effective_sample_size: pct === 0 ? 0 : 480,
+    run_telemetry: telemetry,
   }
 }
 
@@ -135,7 +155,7 @@ export const handlers = [
       return HttpResponse.json(envelope(makeStatusPayload(id, 'completed', 100, 0)))
     }
     if (terminal === 'failed') {
-      return HttpResponse.json(envelope(makeStatusPayload(id, 'failed', 17, 0)))
+      return HttpResponse.json(envelope(makeStatusPayload(id, 'failed', 17, 0, TELEMETRY_FAILED)))
     }
     if (terminal === 'pending') {
       return HttpResponse.json(envelope({

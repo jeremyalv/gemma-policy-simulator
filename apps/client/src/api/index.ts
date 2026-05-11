@@ -22,6 +22,7 @@ export type {
   SimulationDraft,
   SimulationListItem,
   SimulationStatusData,
+  RunTelemetry,
   SimulationResultsData,
   RunAcceptedData,
   DeleteSimulationData,

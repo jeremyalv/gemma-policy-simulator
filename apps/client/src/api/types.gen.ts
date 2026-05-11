@@ -306,6 +306,13 @@ export interface components {
             error: null;
             meta: components["schemas"]["Meta"];
         };
+        RunTelemetry: {
+            retry_count: number;
+            invalid_output_count: number;
+            failure_code: string | null;
+            failure_message: string | null;
+            failed_persona_id: string | null;
+        };
         SimulationStatusData: {
             id: string;
             status: components["schemas"]["SimulationStatus"];
@@ -315,6 +322,7 @@ export interface components {
             estimated_seconds_remaining: number;
             runtime_profile: components["schemas"]["RuntimeProfile"];
             effective_sample_size: number;
+            run_telemetry: components["schemas"]["RunTelemetry"];
         };
         SimulationStatusEnvelope: {
             data: components["schemas"]["SimulationStatusData"];
