@@ -28,6 +28,11 @@ def _insert_row(
     runtime_profile: str | None = None,
     started_at: str | None = None,
     estimated_seconds: int | None = None,
+    run_retry_count: int = 0,
+    run_invalid_output_count: int = 0,
+    run_failure_code: str | None = None,
+    run_failure_message: str | None = None,
+    run_failed_persona_id: str | None = None,
 ) -> None:
     with sqlite3.connect(db_path) as conn:
         conn.execute(
@@ -36,9 +41,10 @@ def _insert_row(
                 id, title, policy_text, dataset, sample_size, filters_json,
                 status, created_at, completed_at, mean_approval, refined_policy_text,
                 started_at, runtime_profile, effective_sample_size, estimated_seconds,
-                run_idempotency_key, run_request_fingerprint, run_prompt_source,
+                run_idempotency_key, run_request_fingerprint, run_prompt_source, run_retry_count,
+                run_invalid_output_count, run_failure_code, run_failure_message, run_failed_persona_id,
                 clarification_status, clarification_turn_index, current_clarification_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 simulation_id,
@@ -59,6 +65,11 @@ def _insert_row(
                 None,
                 None,
                 None,
+                    run_retry_count,
+                    run_invalid_output_count,
+                run_failure_code,
+                run_failure_message,
+                run_failed_persona_id,
                 "none",
                 0,
                 None,
@@ -100,6 +111,13 @@ def test_get_simulation_status_running_progress(monkeypatch: pytest.MonkeyPatch,
     assert data["estimated_seconds_remaining"] == 70
     assert data["progress_pct"] == 30.0
     assert data["agents_completed"] == 36
+    assert data["run_telemetry"] == {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
 
 
 def test_get_simulation_status_pending_returns_zero_progress(tmp_path: Path) -> None:
@@ -117,6 +135,13 @@ def test_get_simulation_status_pending_returns_zero_progress(tmp_path: Path) -> 
     assert data["estimated_seconds_remaining"] == 0
     assert data["runtime_profile"] == "auto"
     assert data["effective_sample_size"] == 90
+    assert data["run_telemetry"] == {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
 
 
 def test_get_simulation_status_completed_returns_terminal_progress(tmp_path: Path) -> None:
@@ -139,6 +164,13 @@ def test_get_simulation_status_completed_returns_terminal_progress(tmp_path: Pat
     assert data["agents_completed"] == 60
     assert data["progress_pct"] == 100.0
     assert data["estimated_seconds_remaining"] == 0
+    assert data["run_telemetry"] == {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
 
 
 def test_get_simulation_status_failed_with_timing_returns_partial_progress(
@@ -159,6 +191,11 @@ def test_get_simulation_status_failed_with_timing_returns_partial_progress(
         runtime_profile="auto",
         started_at=started_at,
         estimated_seconds=50,
+        run_retry_count=2,
+        run_invalid_output_count=1,
+        run_failure_code="PARSE_ERROR",
+        run_failure_message="model output was not valid JSON",
+        run_failed_persona_id="p_sim_failed_00001",
     )
 
     response = client.get("/api/v1/simulations/sim_failed/status")
@@ -170,6 +207,13 @@ def test_get_simulation_status_failed_with_timing_returns_partial_progress(
     assert data["agents_completed"] == 50
     assert data["progress_pct"] == 50.0
     assert data["estimated_seconds_remaining"] == 0
+    assert data["run_telemetry"] == {
+        "retry_count": 2,
+        "invalid_output_count": 1,
+        "failure_code": "PARSE_ERROR",
+        "failure_message": "model output was not valid JSON",
+        "failed_persona_id": "p_sim_failed_00001",
+    }
 
 
 def test_get_simulation_status_not_found(tmp_path: Path) -> None:
@@ -217,6 +261,13 @@ def test_get_simulation_status_back_compat_fallback_when_run_fields_missing(
     assert 0.0 <= data["progress_pct"] <= 99.9
     assert data["estimated_seconds_remaining"] >= 0
     assert 0 <= data["agents_completed"] <= 40
+    assert data["run_telemetry"] == {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
 
 
 def test_get_simulation_status_contract_shape_for_required_fields(tmp_path: Path) -> None:
@@ -237,4 +288,5 @@ def test_get_simulation_status_contract_shape_for_required_fields(tmp_path: Path
         "estimated_seconds_remaining",
         "runtime_profile",
         "effective_sample_size",
+        "run_telemetry",
     }

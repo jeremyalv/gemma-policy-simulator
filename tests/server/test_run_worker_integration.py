@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from apps.server import service as service_module
 from apps.server.app import create_app
 from apps.server.service import run_artifact_path
+from apps.server.simulation_runner import SimulationRunError
 
 
 def _client_with_db(tmp_path: Path) -> tuple[TestClient, Path]:
@@ -110,6 +111,13 @@ def test_run_worker_eventually_completes_and_writes_artifact(
     assert payload["simulation_id"] == "sim_async_ok"
     assert payload["output_count"] == 12
     assert len(payload["raw_outputs"]) == 12
+    assert payload["run_telemetry"] == {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
 
 
 def test_run_worker_uses_base_prompt_when_use_refined_prompt_false(
@@ -163,12 +171,131 @@ def test_run_worker_failure_marks_failed(tmp_path: Path, monkeypatch: pytest.Mon
 
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
-            "SELECT status, completed_at FROM simulations WHERE id = ?",
+            """
+            SELECT
+                status, completed_at, run_retry_count, run_invalid_output_count,
+                run_failure_code, run_failure_message, run_failed_persona_id
+            FROM simulations WHERE id = ?
+            """,
             ("sim_async_fail",),
         ).fetchone()
     assert row is not None
     assert row[0] == "failed"
     assert isinstance(row[1], str) and row[1]
+    assert row[2] == 1
+    assert row[3] == 0
+    assert row[4] == "RUNTIME_ERROR"
+    assert isinstance(row[5], str) and row[5]
+    assert row[6] == "p_sim_async_fail_00001"
+
+    artifact = run_artifact_path("sim_async_fail")
+    assert artifact.exists()
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    assert payload["output_count"] == 0
+    assert payload["run_telemetry"]["retry_count"] == 1
+    assert payload["run_telemetry"]["invalid_output_count"] == 0
+    assert payload["run_telemetry"]["failure_code"] == "RUNTIME_ERROR"
+    assert payload["run_telemetry"]["failed_persona_id"] == "p_sim_async_fail_00001"
+
+
+def test_run_worker_parse_retry_then_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SIMS_RUN_WORKER_ENABLED", "1")
+    monkeypatch.setenv("SIMS_RUN_MAX_RETRIES", "1")
+
+    calls = {"count": 0}
+
+    def _flaky(prompt: str) -> dict[str, object]:
+        _ = prompt
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise SimulationRunError(
+                "model output was not valid JSON",
+                code="PARSE_ERROR",
+                retryable=True,
+                invalid_output=True,
+            )
+        return {"approval": 4, "emotion": "concern", "rationale": "Looks feasible in local context."}
+
+    monkeypatch.setattr(service_module, "generate_policy_response_with_ollama", _flaky)
+
+    client, db_path = _client_with_db(tmp_path)
+    _insert_row(db_path, simulation_id="sim_parse_retry_ok", sample_size=1)
+
+    response = client.post("/api/v1/simulations/sim_parse_retry_ok/run")
+    assert response.status_code == 202
+
+    polled = _poll_status(client, "sim_parse_retry_ok")
+    assert polled["data"]["status"] == "completed"
+    telemetry = polled["data"]["run_telemetry"]
+    assert telemetry["retry_count"] == 1
+    assert telemetry["invalid_output_count"] == 1
+    assert telemetry["failure_code"] is None
+
+
+def test_run_worker_runtime_retry_then_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SIMS_RUN_WORKER_ENABLED", "1")
+    monkeypatch.setenv("SIMS_RUN_MAX_RETRIES", "1")
+
+    calls = {"count": 0}
+
+    def _flaky(prompt: str) -> dict[str, object]:
+        _ = prompt
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("runtime unavailable")
+        return {"approval": 5, "emotion": "hope", "rationale": "The policy seems beneficial overall."}
+
+    monkeypatch.setattr(service_module, "generate_policy_response_with_ollama", _flaky)
+
+    client, db_path = _client_with_db(tmp_path)
+    _insert_row(db_path, simulation_id="sim_runtime_retry_ok", sample_size=1)
+
+    response = client.post("/api/v1/simulations/sim_runtime_retry_ok/run")
+    assert response.status_code == 202
+
+    polled = _poll_status(client, "sim_runtime_retry_ok")
+    assert polled["data"]["status"] == "completed"
+    telemetry = polled["data"]["run_telemetry"]
+    assert telemetry["retry_count"] == 1
+    assert telemetry["invalid_output_count"] == 0
+    assert telemetry["failure_code"] is None
+
+
+def test_run_worker_parse_failure_after_retries_marks_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SIMS_RUN_WORKER_ENABLED", "1")
+    monkeypatch.setenv("SIMS_RUN_MAX_RETRIES", "1")
+
+    def _always_parse_fail(prompt: str) -> dict[str, object]:
+        _ = prompt
+        raise SimulationRunError(
+            "model output approval must be integer in range 1..5",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
+
+    monkeypatch.setattr(service_module, "generate_policy_response_with_ollama", _always_parse_fail)
+
+    client, db_path = _client_with_db(tmp_path)
+    _insert_row(db_path, simulation_id="sim_parse_retry_fail", sample_size=5)
+
+    response = client.post("/api/v1/simulations/sim_parse_retry_fail/run")
+    assert response.status_code == 202
+
+    polled = _poll_status(client, "sim_parse_retry_fail")
+    assert polled["data"]["status"] == "failed"
+    telemetry = polled["data"]["run_telemetry"]
+    assert telemetry["retry_count"] == 1
+    assert telemetry["invalid_output_count"] == 2
+    assert telemetry["failure_code"] == "PARSE_ERROR"
+    assert telemetry["failed_persona_id"] == "p_sim_parse_retry_fail_00001"
+
+    artifact = run_artifact_path("sim_parse_retry_fail")
+    assert artifact.exists()
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    assert payload["output_count"] == 0
+    assert payload["run_telemetry"]["failure_code"] == "PARSE_ERROR"
+    assert payload["run_telemetry"]["failed_persona_id"] == "p_sim_parse_retry_fail_00001"
 
 
 def test_delete_simulation_removes_run_artifact(tmp_path: Path) -> None:

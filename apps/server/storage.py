@@ -44,6 +44,11 @@ class SimulationStore:
                     run_idempotency_key TEXT,
                     run_request_fingerprint TEXT,
                     run_prompt_source TEXT,
+                    run_retry_count INTEGER NOT NULL DEFAULT 0,
+                    run_invalid_output_count INTEGER NOT NULL DEFAULT 0,
+                    run_failure_code TEXT,
+                    run_failure_message TEXT,
+                    run_failed_persona_id TEXT,
                     clarification_status TEXT NOT NULL DEFAULT 'none',
                     clarification_turn_index INTEGER NOT NULL DEFAULT 0,
                     current_clarification_id TEXT
@@ -72,6 +77,16 @@ class SimulationStore:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_request_fingerprint TEXT")
             if "run_prompt_source" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_prompt_source TEXT")
+            if "run_retry_count" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_retry_count INTEGER NOT NULL DEFAULT 0")
+            if "run_invalid_output_count" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_invalid_output_count INTEGER NOT NULL DEFAULT 0")
+            if "run_failure_code" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_failure_code TEXT")
+            if "run_failure_message" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_failure_message TEXT")
+            if "run_failed_persona_id" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_failed_persona_id TEXT")
             if "clarification_status" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN clarification_status TEXT NOT NULL DEFAULT 'none'")
             if "clarification_turn_index" not in existing_columns:
@@ -143,6 +158,11 @@ class SimulationStore:
             "run_idempotency_key": row["run_idempotency_key"],
             "run_request_fingerprint": row["run_request_fingerprint"],
             "run_prompt_source": row["run_prompt_source"],
+            "run_retry_count": row["run_retry_count"],
+            "run_invalid_output_count": row["run_invalid_output_count"],
+            "run_failure_code": row["run_failure_code"],
+            "run_failure_message": row["run_failure_message"],
+            "run_failed_persona_id": row["run_failed_persona_id"],
             "clarification_status": row["clarification_status"],
             "clarification_turn_index": row["clarification_turn_index"],
             "current_clarification_id": row["current_clarification_id"],
@@ -279,7 +299,12 @@ class SimulationStore:
                     estimated_seconds = ?,
                     run_idempotency_key = ?,
                     run_request_fingerprint = ?,
-                    run_prompt_source = ?
+                    run_prompt_source = ?,
+                    run_retry_count = 0,
+                    run_invalid_output_count = 0,
+                    run_failure_code = NULL,
+                    run_failure_message = NULL,
+                    run_failed_persona_id = NULL
                 WHERE id = ? AND status = 'pending'
                 """,
                 (
@@ -301,17 +326,29 @@ class SimulationStore:
         simulation_id: str,
         completed_at: str,
         mean_approval: float,
+        run_retry_count: int,
+        run_invalid_output_count: int,
     ) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
                 """
                 UPDATE simulations
-                SET status = 'completed', completed_at = ?, mean_approval = ?
+                SET
+                    status = 'completed',
+                    completed_at = ?,
+                    mean_approval = ?,
+                    run_retry_count = ?,
+                    run_invalid_output_count = ?,
+                    run_failure_code = NULL,
+                    run_failure_message = NULL,
+                    run_failed_persona_id = NULL
                 WHERE id = ? AND status = 'running'
                 """,
                 (
                     completed_at,
                     mean_approval,
+                    run_retry_count,
+                    run_invalid_output_count,
                     simulation_id,
                 ),
             )
@@ -322,16 +359,33 @@ class SimulationStore:
         *,
         simulation_id: str,
         completed_at: str,
+        run_retry_count: int,
+        run_invalid_output_count: int,
+        run_failure_code: str,
+        run_failure_message: str,
+        run_failed_persona_id: str | None,
     ) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
                 """
                 UPDATE simulations
-                SET status = 'failed', completed_at = ?
+                SET
+                    status = 'failed',
+                    completed_at = ?,
+                    run_retry_count = ?,
+                    run_invalid_output_count = ?,
+                    run_failure_code = ?,
+                    run_failure_message = ?,
+                    run_failed_persona_id = ?
                 WHERE id = ? AND status = 'running'
                 """,
                 (
                     completed_at,
+                    run_retry_count,
+                    run_invalid_output_count,
+                    run_failure_code,
+                    run_failure_message,
+                    run_failed_persona_id,
                     simulation_id,
                 ),
             )

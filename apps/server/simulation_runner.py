@@ -14,6 +14,7 @@ DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_MODEL = "gemma"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_BATCH_SIZE = 8
+DEFAULT_MAX_RETRIES = 1
 
 STATES = ["CA", "TX", "FL", "NY", "WA", "IL", "PA", "OH"]
 SEXES = ["female", "male"]
@@ -37,6 +38,20 @@ CITIES_BY_STATE = {
 class SimulationRunError(Exception):
     """Raised when a simulation run fails."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "UNKNOWN_ERROR",
+        retryable: bool = False,
+        invalid_output: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.retryable = retryable
+        self.invalid_output = invalid_output
+
 
 def _ollama_base_url() -> str:
     return os.getenv("SIMS_OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL).rstrip("/")
@@ -44,6 +59,10 @@ def _ollama_base_url() -> str:
 
 def _run_model() -> str:
     return os.getenv("SIMS_RUN_MODEL", DEFAULT_MODEL)
+
+
+def resolve_run_model() -> str:
+    return _run_model()
 
 
 def _timeout_seconds() -> int:
@@ -66,6 +85,17 @@ def resolve_batch_size() -> int:
     except ValueError:
         return DEFAULT_BATCH_SIZE
     return max(1, parsed)
+
+
+def resolve_max_retries() -> int:
+    raw = os.getenv("SIMS_RUN_MAX_RETRIES")
+    if raw is None:
+        return DEFAULT_MAX_RETRIES
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return DEFAULT_MAX_RETRIES
+    return max(0, parsed)
 
 
 def _seed_for_simulation(simulation_id: str) -> int:
@@ -107,7 +137,7 @@ def generate_personas(*, simulation_id: str, count: int, filters: dict[str, Any]
     if isinstance(age_range, list) and len(age_range) == 2 and all(isinstance(v, int) for v in age_range):
         min_age, max_age = int(age_range[0]), int(age_range[1])
         if min_age > max_age:
-            raise SimulationRunError("invalid age_range filter for persona generation")
+            raise SimulationRunError("invalid age_range filter for persona generation", code="UNKNOWN_ERROR")
 
     personas: list[dict[str, Any]] = []
     for idx in range(count):
@@ -163,28 +193,48 @@ def _call_ollama(prompt: str) -> dict[str, Any]:
         with request.urlopen(req, timeout=_timeout_seconds()) as resp:
             response_body = resp.read()
     except error.URLError as exc:
-        raise SimulationRunError("failed to reach model runtime") from exc
+        raise SimulationRunError("failed to reach model runtime", code="RUNTIME_ERROR", retryable=True) from exc
     except TimeoutError as exc:
-        raise SimulationRunError("model runtime timed out") from exc
+        raise SimulationRunError("model runtime timed out", code="RUNTIME_ERROR", retryable=True) from exc
     except Exception as exc:
-        raise SimulationRunError("unexpected model runtime error") from exc
+        raise SimulationRunError("unexpected model runtime error", code="RUNTIME_ERROR", retryable=True) from exc
 
     try:
         payload = json.loads(response_body)
     except json.JSONDecodeError as exc:
-        raise SimulationRunError("model response was not valid JSON") from exc
+        raise SimulationRunError(
+            "model response was not valid JSON",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        ) from exc
 
     raw_content = payload.get("response")
     if not isinstance(raw_content, str):
-        raise SimulationRunError("model response did not contain response text")
+        raise SimulationRunError(
+            "model response did not contain response text",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
 
     try:
         generated = json.loads(raw_content)
     except json.JSONDecodeError as exc:
-        raise SimulationRunError("model output was not valid JSON") from exc
+        raise SimulationRunError(
+            "model output was not valid JSON",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        ) from exc
 
     if not isinstance(generated, dict):
-        raise SimulationRunError("model output must be a JSON object")
+        raise SimulationRunError(
+            "model output must be a JSON object",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
 
     return generated
 
@@ -196,13 +246,33 @@ def parse_policy_response(generated: dict[str, Any]) -> dict[str, Any]:
     behavior_change = generated.get("behavior_change")
 
     if not isinstance(approval, int) or not (1 <= approval <= 5):
-        raise SimulationRunError("model output approval must be integer in range 1..5")
+        raise SimulationRunError(
+            "model output approval must be integer in range 1..5",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
     if not isinstance(emotion, str) or not emotion.strip():
-        raise SimulationRunError("model output emotion must be non-empty string")
+        raise SimulationRunError(
+            "model output emotion must be non-empty string",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
     if not isinstance(rationale, str) or not rationale.strip():
-        raise SimulationRunError("model output rationale must be non-empty string")
+        raise SimulationRunError(
+            "model output rationale must be non-empty string",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
     if behavior_change is not None and not isinstance(behavior_change, bool):
-        raise SimulationRunError("model output behavior_change must be boolean when provided")
+        raise SimulationRunError(
+            "model output behavior_change must be boolean when provided",
+            code="PARSE_ERROR",
+            retryable=True,
+            invalid_output=True,
+        )
 
     parsed: dict[str, Any] = {
         "approval": approval,

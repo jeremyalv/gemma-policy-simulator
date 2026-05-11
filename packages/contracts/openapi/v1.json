@@ -927,6 +927,43 @@
           }
         }
       },
+      "RunTelemetry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "retry_count",
+          "invalid_output_count",
+          "failure_code",
+          "failure_message",
+          "failed_persona_id"
+        ],
+        "properties": {
+          "retry_count": {
+            "type": "integer"
+          },
+          "invalid_output_count": {
+            "type": "integer"
+          },
+          "failure_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "failure_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "failed_persona_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "SimulationStatusData": {
         "type": "object",
         "additionalProperties": false,
@@ -938,7 +975,8 @@
           "progress_pct",
           "estimated_seconds_remaining",
           "runtime_profile",
-          "effective_sample_size"
+          "effective_sample_size",
+          "run_telemetry"
         ],
         "properties": {
           "id": {
@@ -964,6 +1002,9 @@
           },
           "effective_sample_size": {
             "type": "integer"
+          },
+          "run_telemetry": {
+            "$ref": "#/components/schemas/RunTelemetry"
           }
         }
       },

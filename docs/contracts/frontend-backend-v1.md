@@ -178,7 +178,14 @@ Response `200`:
     "progress_pct": 42.4,
     "estimated_seconds_remaining": 44,
     "runtime_profile": "balanced",
-    "effective_sample_size": 180
+    "effective_sample_size": 180,
+    "run_telemetry": {
+      "retry_count": 3,
+      "invalid_output_count": 1,
+      "failure_code": null,
+      "failure_message": null,
+      "failed_persona_id": null
+    }
   },
   "error": null,
   "meta": {

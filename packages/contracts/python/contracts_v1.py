@@ -188,6 +188,13 @@ class RunSimulationRequest(TypedDict, total=False):
     profile: NotRequired[RuntimeProfile]
     use_refined_prompt: NotRequired[bool]
 
+class RunTelemetry(TypedDict, total=False):
+    failed_persona_id: Required[str | None]
+    failure_code: Required[str | None]
+    failure_message: Required[str | None]
+    invalid_output_count: Required[int]
+    retry_count: Required[int]
+
 RuntimeProfile = Literal['interactive', 'balanced', 'thorough', 'auto']
 class SimulationDraft(TypedDict, total=False):
     created_at: Required[str]
@@ -235,6 +242,7 @@ class SimulationStatusData(TypedDict, total=False):
     estimated_seconds_remaining: Required[int]
     id: Required[str]
     progress_pct: Required[float]
+    run_telemetry: Required[RunTelemetry]
     runtime_profile: Required[RuntimeProfile]
     status: Required[SimulationStatus]
 
@@ -287,6 +295,7 @@ __all__ = [
     "RunAcceptedEnvelope",
     "RunConfig",
     "RunSimulationRequest",
+    "RunTelemetry",
     "RuntimeProfile",
     "SimulationDraft",
     "SimulationListEnvelope",

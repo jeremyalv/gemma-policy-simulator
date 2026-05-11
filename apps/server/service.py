@@ -41,6 +41,8 @@ from .simulation_runner import (
     generate_personas,
     generate_policy_response_with_ollama,
     resolve_batch_size,
+    resolve_max_retries,
+    resolve_run_model,
 )
 from .storage import SimulationStore
 
@@ -157,6 +159,32 @@ def _derive_progress_snapshot(
         return agents_completed, float(progress_pct), 0
 
     return 0, 0.0, 0
+
+
+def _normalize_retry_error(exc: Exception) -> SimulationRunError:
+    if isinstance(exc, SimulationRunError):
+        return exc
+    return SimulationRunError(
+        "unexpected model runtime error",
+        code="RUNTIME_ERROR",
+        retryable=True,
+        invalid_output=False,
+    )
+
+
+def _status_run_telemetry(simulation: dict[str, Any]) -> dict[str, Any]:
+    retry_count = simulation.get("run_retry_count")
+    invalid_output_count = simulation.get("run_invalid_output_count")
+    failure_code = simulation.get("run_failure_code")
+    failure_message = simulation.get("run_failure_message")
+    failed_persona_id = simulation.get("run_failed_persona_id")
+    return {
+        "retry_count": int(retry_count) if isinstance(retry_count, int) and retry_count >= 0 else 0,
+        "invalid_output_count": int(invalid_output_count) if isinstance(invalid_output_count, int) and invalid_output_count >= 0 else 0,
+        "failure_code": failure_code if isinstance(failure_code, str) and failure_code else None,
+        "failure_message": failure_message if isinstance(failure_message, str) and failure_message else None,
+        "failed_persona_id": failed_persona_id if isinstance(failed_persona_id, str) and failed_persona_id else None,
+    }
 
 
 def _run_request_fingerprint(simulation_id: str, request_body: RunSimulationRequest) -> str:
@@ -595,6 +623,14 @@ def dispatch_run_worker(db_path: Path, simulation_id: str) -> None:
 
 def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
     store = SimulationStore(db_path=db_path)
+    outputs: list[dict[str, Any]] = []
+    telemetry = {
+        "retry_count": 0,
+        "invalid_output_count": 0,
+        "failure_code": None,
+        "failure_message": None,
+        "failed_persona_id": None,
+    }
     try:
         simulation = store.fetch_simulation(simulation_id)
         if simulation is None or simulation.get("status") != "running":
@@ -610,23 +646,44 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             filters=filters if isinstance(filters, dict) else None,
         )
 
-        outputs: list[dict[str, Any]] = []
+        max_retries = resolve_max_retries()
         batch_size = resolve_batch_size()
         for start in range(0, len(personas), batch_size):
             batch = personas[start : start + batch_size]
             for persona in batch:
                 prompt = build_policy_prompt(policy_text=policy_text, persona=persona)
-                parsed = generate_policy_response_with_ollama(prompt)
+                attempts = 0
+                while True:
+                    try:
+                        parsed = generate_policy_response_with_ollama(prompt)
+                        break
+                    except Exception as exc:
+                        run_error = _normalize_retry_error(exc)
+                        if run_error.invalid_output:
+                            telemetry["invalid_output_count"] += 1
+
+                        if run_error.retryable and attempts < max_retries:
+                            attempts += 1
+                            telemetry["retry_count"] += 1
+                            continue
+
+                        telemetry["failure_code"] = run_error.code or "UNKNOWN_ERROR"
+                        telemetry["failure_message"] = run_error.message or "unexpected run worker error"
+                        persona_id = persona.get("persona_id")
+                        if isinstance(persona_id, str) and persona_id:
+                            telemetry["failed_persona_id"] = persona_id
+                        raise run_error
                 outputs.append({"persona": persona, "response": parsed})
 
         if not outputs:
-            raise SimulationRunError("no outputs generated")
+            raise SimulationRunError("no outputs generated", code="EMPTY_OUTPUT", retryable=False, invalid_output=False)
 
         artifact = {
             "simulation_id": simulation_id,
-            "model": "gemma",
+            "model": resolve_run_model(),
             "output_count": len(outputs),
             "raw_outputs": outputs,
+            "run_telemetry": telemetry,
         }
         run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
 
@@ -635,11 +692,32 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             simulation_id=simulation_id,
             completed_at=utc_now_iso(),
             mean_approval=mean_approval,
+            run_retry_count=int(telemetry["retry_count"]),
+            run_invalid_output_count=int(telemetry["invalid_output_count"]),
         )
-    except Exception:
+    except Exception as exc:
+        if telemetry["failure_code"] is None:
+            run_error = exc if isinstance(exc, SimulationRunError) else SimulationRunError("unexpected run worker error", code="UNKNOWN_ERROR")
+            telemetry["failure_code"] = run_error.code or "UNKNOWN_ERROR"
+            telemetry["failure_message"] = run_error.message or "unexpected run worker error"
+
+        artifact = {
+            "simulation_id": simulation_id,
+            "model": resolve_run_model(),
+            "output_count": len(outputs),
+            "raw_outputs": outputs,
+            "run_telemetry": telemetry,
+        }
+        run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
+
         store.fail_simulation_run(
             simulation_id=simulation_id,
             completed_at=utc_now_iso(),
+            run_retry_count=int(telemetry["retry_count"]),
+            run_invalid_output_count=int(telemetry["invalid_output_count"]),
+            run_failure_code=cast(str, telemetry["failure_code"]),
+            run_failure_message=cast(str, telemetry["failure_message"]),
+            run_failed_persona_id=cast(str | None, telemetry["failed_persona_id"]),
         )
 
 
@@ -683,6 +761,7 @@ def get_simulation_status(store: SimulationStore, simulation_id: str) -> Simulat
                 "estimated_seconds_remaining": estimated_seconds_remaining,
                 "runtime_profile": runtime_profile,
                 "effective_sample_size": agents_total,
+                "run_telemetry": _status_run_telemetry(simulation),
             },
             "error": None,
             "meta": {"request_id": new_request_id()},

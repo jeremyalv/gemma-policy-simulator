@@ -102,6 +102,12 @@ Optional fields:
 - `device_profile` (string, example: `m1_pro_16gb`, `low_spec_laptop`)
 - `runtime_profile` (string, one of run profiles)
 - `batch_size` (integer, optional)
+- `run_telemetry` (object, required in `GET /simulations/{id}/status`) with:
+  - `retry_count` (integer)
+  - `invalid_output_count` (integer)
+  - `failure_code` (string, nullable)
+  - `failure_message` (string, nullable)
+  - `failed_persona_id` (string, nullable)
 
 ## Agent Response Schema (V1)
 Each simulated agent must return valid JSON:
