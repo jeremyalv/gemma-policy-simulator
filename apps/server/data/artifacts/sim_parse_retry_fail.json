@@ -1,0 +1,1 @@
+{"simulation_id": "sim_parse_retry_fail", "model": "gemma", "output_count": 0, "raw_outputs": [], "run_telemetry": {"retry_count": 1, "invalid_output_count": 2, "failure_code": "PARSE_ERROR", "failure_message": "model output approval must be integer in range 1..5", "failed_persona_id": "p_sim_parse_retry_fail_00001"}}

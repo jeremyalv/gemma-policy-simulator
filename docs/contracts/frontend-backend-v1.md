@@ -444,6 +444,11 @@ Download raw per-agent responses as CSV.
 
 Response: `200` with `Content-Type: text/csv` stream.
 
+Only available when simulation status is `completed`.
+- `404 NOT_FOUND` when simulation id does not exist.
+- `409 SIMULATION_NOT_COMPLETE` when status is `pending` or `running`.
+- `409 SIMULATION_FAILED` when status is `failed`.
+
 ## Planned V2 Endpoints
 - `POST /simulations/compare`
 - `GET /simulations/{id}/recommendations`

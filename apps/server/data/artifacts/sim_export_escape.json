@@ -1,0 +1,1 @@
+{"simulation_id": "sim_export_escape", "model": "gemma", "output_count": 1, "raw_outputs": [{"persona": {"persona_id": "p_001", "name": "Alice", "age": 29, "occupation": "Nurse", "city": "Los Angeles", "state": "CA"}, "response": {"approval": 4, "emotion": "hope", "rationale": "He said, \"Looks good\", but\nneeds clearer rollout."}}]}

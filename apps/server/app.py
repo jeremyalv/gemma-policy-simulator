@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
@@ -16,6 +16,7 @@ from .service import (
     answer_clarification_question,
     create_simulation_draft,
     delete_simulation,
+    export_simulation_csv,
     generate_clarification_question,
     get_clarification_state,
     get_simulation_results,
@@ -174,6 +175,21 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
         return JSONResponse(status_code=200, content=response)
+
+    @app.get("/api/v1/simulations/{simulation_id}/export", status_code=200)
+    async def export_simulation_results_csv(simulation_id: str) -> Any:
+        try:
+            csv_content = export_simulation_csv(store, simulation_id)
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return Response(
+            content=csv_content,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="infinipol-{simulation_id}-results.csv"'
+            },
+        )
 
     @app.post("/api/v1/clarifications/{clarification_id}/answer", status_code=200)
     async def post_answer_clarification(clarification_id: str, request: Request) -> Any:

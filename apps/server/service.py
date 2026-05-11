@@ -7,7 +7,9 @@ import json
 import math
 import os
 import threading
+from csv import DictWriter
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
@@ -850,3 +852,115 @@ def get_simulation_results(store: SimulationStore, simulation_id: str) -> Simula
             "meta": {"request_id": new_request_id()},
         },
     )
+
+
+def export_simulation_csv(store: SimulationStore, simulation_id: str) -> str:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+
+    status = cast(str, simulation["status"])
+    if status in {"pending", "running"}:
+        raise ApiError(
+            code="SIMULATION_NOT_COMPLETE",
+            message="export is only available after simulation completion",
+            status_code=409,
+        )
+    if status == "failed":
+        raise ApiError(
+            code="SIMULATION_FAILED",
+            message="simulation failed; export is unavailable",
+            status_code=409,
+        )
+    if status != "completed":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message=f"unsupported lifecycle status for export: {status}",
+            status_code=409,
+        )
+
+    artifact_path = run_artifact_path(simulation_id)
+    if not artifact_path.exists():
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"missing run artifact for completed simulation: {simulation_id}",
+            status_code=500,
+        )
+
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"invalid run artifact JSON for simulation: {simulation_id}",
+            status_code=500,
+        ) from exc
+
+    raw_outputs = artifact.get("raw_outputs")
+    if not isinstance(raw_outputs, list):
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"run artifact missing raw_outputs for simulation: {simulation_id}",
+            status_code=500,
+        )
+
+    fieldnames = [
+        "persona_id",
+        "name",
+        "age",
+        "occupation",
+        "city",
+        "state",
+        "approval",
+        "emotion",
+        "rationale",
+        "behavioral_change",
+    ]
+    rows: list[dict[str, Any]] = []
+    for item in raw_outputs:
+        if not isinstance(item, dict):
+            raise ApiError(
+                code="INTERNAL_ERROR",
+                message=f"invalid run artifact contents for simulation: {simulation_id}",
+                status_code=500,
+            )
+        persona = item.get("persona")
+        response = item.get("response")
+        if not isinstance(persona, dict) or not isinstance(response, dict):
+            raise ApiError(
+                code="INTERNAL_ERROR",
+                message=f"invalid run artifact contents for simulation: {simulation_id}",
+                status_code=500,
+            )
+
+        behavior_change = response.get("behavior_change")
+        behavior_change_text = ""
+        if isinstance(behavior_change, bool):
+            behavior_change_text = "true" if behavior_change else "false"
+
+        rows.append(
+            {
+                "persona_id": persona.get("persona_id", ""),
+                "name": persona.get("name", ""),
+                "age": persona.get("age", ""),
+                "occupation": persona.get("occupation", ""),
+                "city": persona.get("city", ""),
+                "state": persona.get("state", ""),
+                "approval": response.get("approval", ""),
+                "emotion": response.get("emotion", ""),
+                "rationale": response.get("rationale", ""),
+                "behavioral_change": behavior_change_text,
+            }
+        )
+
+    rows.sort(key=lambda row: str(row["persona_id"]))
+
+    output = StringIO()
+    writer = DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return output.getvalue()
