@@ -753,7 +753,7 @@ function TryItSection() {
               Interactive Demo
             </Badge>
             <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              See it in action — try any policy idea
+              See it in action: try any policy idea
             </Text>
             <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
               Type a policy description and get an instant preview of how the synthetic
@@ -775,7 +775,7 @@ function TryItSection() {
             {/* Preset chips */}
             <Box style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-subtle)', backgroundColor: 'var(--color-bg-subtle)' }}>
               <Text size="xs" fw={600} c="var(--color-text-tertiary)" mb={10} style={{ textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                Quick Start — pick a category
+                Quick Start: pick a category
               </Text>
               <Group gap={8} wrap="wrap">
                 {POLICY_PRESETS.map(p => (
@@ -803,7 +803,7 @@ function TryItSection() {
             {/* Textarea + button */}
             <Box style={{ padding: '20px' }}>
               <Textarea
-                placeholder="Describe a policy idea — e.g. 'Universal childcare subsidy for families earning under $80K…'"
+                placeholder="Describe a policy idea, e.g. 'Universal childcare subsidy for families earning under $80K…'"
                 value={text}
                 onChange={e => { setText(e.currentTarget.value); setActive(null); setPhase('idle'); setResult(null) }}
                 minRows={3}
@@ -943,7 +943,7 @@ function FeaturesSection() {
             </Text>
             <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
               InfiniPol gives policy analysts, researchers, and advocates a complete toolkit
-              for understanding public response — before the policy goes live.
+              for understanding public response, before the policy goes live.
             </Text>
           </Stack>
           <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
@@ -1024,7 +1024,7 @@ function HowItWorksSection() {
   const visible = useInView(ref, 0.1)
   const steps = [
     { n: '01', title: 'Describe your policy', body: 'Write a plain-language description covering scope, mechanisms, costs, and benefits. The clearer the input, the sharper the simulation.' },
-    { n: '02', title: 'Choose your audience', body: 'Filter by state, age, sex, education, or occupation — or leave blank for a nationally representative US sample.' },
+    { n: '02', title: 'Choose your audience', body: 'Filter by state, age, sex, education, or occupation, or leave blank for a nationally representative US sample.' },
     { n: '03', title: 'Run & review', body: 'Get a mean approval score (1–5), emotion profile, behavioral-change estimate, demographic breakdown, and persona quotes.' },
     { n: '04', title: 'Challenge & iterate', body: 'Use AI Challenge Mode to stress-test weak spots, compare two variants side-by-side, or refine the wording and re-run.' },
   ]
@@ -1068,7 +1068,7 @@ function CtaSection() {
             Ready to simulate your first policy?
           </Text>
           <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 420 }}>
-            It takes under two minutes. No signup required — your data stays in your browser.
+            It takes under two minutes. No signup required. Your data stays in your browser.
           </Text>
           <Group gap="md" justify="center" wrap="wrap">
             <Box style={{ position: 'relative' }}>
@@ -1081,7 +1081,7 @@ function CtaSection() {
             <Button component={Link} to="/simulations" size="lg" variant="subtle" color="gray">View Simulations</Button>
           </Group>
           <Text size="xs" c="var(--color-text-disabled)" style={{ maxWidth: 360 }}>
-            Synthetic personas from NVIDIA Nemotron-Personas (CC BY 4.0). Results are AI-generated — always validate with primary research.
+            Synthetic personas from NVIDIA Nemotron-Personas (CC BY 4.0). Results are AI-generated; always validate with primary research.
           </Text>
         </Stack>
       </Container>
@@ -1388,7 +1388,7 @@ function RoadmapSection() {
 
 const IMPACT_METRICS = [
   { value: '< 2 min', label: 'From policy text to full demographic analysis', sub: 'No recruitment, no scheduling, no fieldwork wait',   icon: <Zap size={20} />,        color: '#0D9488' },
-  { value: '500',     label: 'AI-generated persona reactions per simulation',  sub: 'Adjustable from 20 to 2,000 — runs in minutes',      icon: <BarChart2 size={20} />,  color: '#7C3AED' },
+  { value: '500',     label: 'AI-generated persona reactions per simulation',  sub: 'Adjustable from 20 to 2,000, runs in minutes',      icon: <BarChart2 size={20} />,  color: '#7C3AED' },
   { value: '12+',     label: 'Demographic segments broken down per run',       sub: 'Age group, region, income, education and more',      icon: <Globe size={20} />,      color: '#15803D' },
   { value: 'PDF+CSV', label: 'Export formats included with every simulation',  sub: 'Brief-ready reports and raw data, always available', icon: <TrendingUp size={20} />, color: '#0369A1' },
 ]
@@ -1396,7 +1396,7 @@ const IMPACT_METRICS = [
 const POTENTIAL_APPLICATIONS = [
   {
     title: 'Government Policy Teams',
-    description: 'Run AI-assisted reaction analysis on draft legislation before public consultation opens. Identify which demographic segments are most likely to push back — and why — so messaging and policy details can be refined early.',
+    description: 'Run AI-assisted reaction analysis on draft legislation before public consultation opens. Identify which demographic segments are most likely to push back, and why, so messaging and policy details can be refined early.',
     icon: <Shield size={18} />, color: '#15803D',
   },
   {
@@ -1441,7 +1441,7 @@ function ForecastedImpactSection() {
                 What InfiliPol does today
               </Text>
               <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 500 }}>
-                Concrete capabilities — not projections. Every number below is a real product characteristic.
+                Concrete capabilities, not projections. Every number below is a real product characteristic.
               </Text>
             </Stack>
             <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
@@ -1476,7 +1476,7 @@ function ForecastedImpactSection() {
                 How teams use InfiliPol
               </Text>
               <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
-                AI-assisted analysis works best as an early-stage thinking tool — before fieldwork, before publication, before announcement.
+                AI-assisted analysis works best as an early-stage thinking tool, before fieldwork, before publication, before announcement.
               </Text>
             </Stack>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">

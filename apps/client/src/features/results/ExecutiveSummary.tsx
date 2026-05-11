@@ -13,11 +13,11 @@ import type { SimulationResultsData } from '@/api'
 
 // Map approval score to a prose label
 function approvalNarrative(score: number): string {
-  if (score < 2)   return 'Strong opposition — most respondents oppose this policy.'
-  if (score < 2.8) return 'Moderate opposition — a majority lean against this policy.'
-  if (score < 3.2) return 'Mixed reception — public opinion is divided.'
-  if (score < 3.8) return 'Moderate support — a majority lean in favour.'
-  return 'Strong support — most respondents approve of this policy.'
+  if (score < 2)   return 'Strong opposition: most respondents oppose this policy.'
+  if (score < 2.8) return 'Moderate opposition: a majority lean against this policy.'
+  if (score < 3.2) return 'Mixed reception: public opinion is divided.'
+  if (score < 3.8) return 'Moderate support: a majority lean in favour.'
+  return 'Strong support: most respondents approve of this policy.'
 }
 
 // Generate "In a Nutshell" narrative from results data
@@ -31,7 +31,7 @@ function generateNutshell(results: SimulationResultsData): string {
   return `${narrative} The mean approval score of ${score.toFixed(1)}/5 suggests ` +
     `${score >= 3.5 ? 'a generally receptive public, though key segments may still push back' : score >= 3 ? 'a divided public with significant concerns to address' : 'substantial resistance that would require major policy rethinking'}. ` +
     `The dominant emotional response is ${emotion}, and ${behaviorPct} of personas indicated they would change their behaviour as a result of this policy. ` +
-    `${score >= 4 ? 'This is a strong foundation — focus on the demographic gaps and dissenting voices before rollout.' : score >= 3.2 ? 'Work on messaging and the segments showing concern before moving forward.' : 'Consider significant rethinking or targeted pilot programmes before broader rollout.'}`
+    `${score >= 4 ? 'This is a strong foundation; focus on the demographic gaps and dissenting voices before rollout.' : score >= 3.2 ? 'Work on messaging and the segments showing concern before moving forward.' : 'Consider significant rethinking or targeted pilot programmes before broader rollout.'}`
 }
 
 // Derive strengths & concerns from approval distribution
@@ -54,13 +54,13 @@ function deriveHighlights(results: SimulationResultsData): { strengths: string[]
   if (summary.behavioral_change_pct > 0.35) strengths.push(`High behavioural intent: ${formatPct(summary.behavioral_change_pct)} say they'd change behaviour`)
 
   if (oppose >= 0.35)   concerns.push(`Significant opposition bloc: ${Math.round(oppose * 100)}% rated 1 or 2`)
-  if (neutral >= 0.35)  concerns.push(`Large undecided segment: ${Math.round(neutral * 100)}% gave a neutral rating — room to persuade or lose`)
-  if (summary.dominant_emotion === 'anger')   concerns.push(`Anger is the dominant emotion — policy framing may need revisiting`)
-  if (summary.dominant_emotion === 'concern') concerns.push(`Concern is dominant — specific risk factors should be addressed explicitly`)
-  if (summary.behavioral_change_pct < 0.1)  concerns.push(`Low behavioural intent — the policy may not motivate real-world change`)
+  if (neutral >= 0.35)  concerns.push(`Large undecided segment: ${Math.round(neutral * 100)}% gave a neutral rating, room to persuade or lose`)
+  if (summary.dominant_emotion === 'anger')   concerns.push(`Anger is the dominant emotion; policy framing may need revisiting`)
+  if (summary.dominant_emotion === 'concern') concerns.push(`Concern is dominant; specific risk factors should be addressed explicitly`)
+  if (summary.behavioral_change_pct < 0.1)  concerns.push(`Low behavioural intent: the policy may not motivate real-world change`)
 
-  if (strengths.length === 0) strengths.push('Results are within acceptable range — check demographic breakdowns for targeted messaging')
-  if (concerns.length === 0)  concerns.push('No major red flags — but review persona voices for nuanced pushback')
+  if (strengths.length === 0) strengths.push('Results are within acceptable range; check demographic breakdowns for targeted messaging')
+  if (concerns.length === 0)  concerns.push('No major red flags, but review persona voices for nuanced pushback')
 
   return { strengths, concerns }
 }

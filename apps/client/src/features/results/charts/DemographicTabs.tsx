@@ -119,14 +119,14 @@ function SegmentInsights({ data }: { data: { segment: string; approval: number; 
         <TrendingUp size={14} color="#15803D" style={{ flexShrink: 0, marginTop: 2 }} />
         <Box>
           <Text size="xs" fw={600} style={{ color: '#15803D' }}>Highest approval</Text>
-          <Text size="xs" c="var(--color-text-secondary)" mt={1}><b>{top.segment}</b> — {formatApproval(top.approval)}/5</Text>
+          <Text size="xs" c="var(--color-text-secondary)" mt={1}><b>{top.segment}</b>: {formatApproval(top.approval)}/5</Text>
         </Box>
       </Group>
       <Group gap={8} align="flex-start" style={{ backgroundColor: 'rgba(185,28,28,0.05)', border: '1px solid rgba(185,28,28,0.18)', borderRadius: 8, padding: '10px 14px' }}>
         <TrendingDown size={14} color="#B91C1C" style={{ flexShrink: 0, marginTop: 2 }} />
         <Box>
           <Text size="xs" fw={600} style={{ color: '#B91C1C' }}>Lowest approval</Text>
-          <Text size="xs" c="var(--color-text-secondary)" mt={1}><b>{bottom.segment}</b> — {formatApproval(bottom.approval)}/5
+          <Text size="xs" c="var(--color-text-secondary)" mt={1}><b>{bottom.segment}</b>: {formatApproval(bottom.approval)}/5
             {delta > 0.4 && <span style={{ color: '#B45309', marginLeft: 4 }}>(Δ {delta.toFixed(1)} gap)</span>}
           </Text>
         </Box>

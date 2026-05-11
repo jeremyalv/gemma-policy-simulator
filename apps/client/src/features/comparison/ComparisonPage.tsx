@@ -238,7 +238,7 @@ const REFERENCE_OUTCOMES: Record<string, { pros: string[]; cons: string[]; conte
 function ReferenceAnalysisPanel({ precedent, simResultA, onDismiss }: ReferenceAnalysisPanelProps) {
   const outcome = REFERENCE_OUTCOMES[precedent.id] ?? REFERENCE_OUTCOMES['default']
   const approvalDelta = simResultA
-    ? `Your simulation scored ${simResultA.summary.mean_approval.toFixed(1)}/5 — this historical policy had a real-world approval trajectory starting from mixed public reaction.`
+    ? `Your simulation scored ${simResultA.summary.mean_approval.toFixed(1)}/5. This historical policy had a real-world approval trajectory starting from mixed public reaction.`
     : null
 
   return (
@@ -365,7 +365,7 @@ function PrecedentHints({
     >
       <Text size="xs" fw={600} c="var(--color-text-tertiary)" mb={10}
         style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        Matching policy precedents — click to analyse
+        Matching policy precedents: click to analyse
       </Text>
       <Stack gap={8}>
         {matches.map((p) => (
@@ -703,7 +703,7 @@ export default function ComparisonPage() {
                       }}
                     />
                     <Text fw={700} size="sm" c="var(--color-text-primary)">
-                      A — {slotATitle}
+                      A: {slotATitle}
                     </Text>
                     <Button
                       size="xs"
@@ -741,7 +741,7 @@ export default function ComparisonPage() {
                       }}
                     />
                     <Text fw={700} size="sm" c="var(--color-text-primary)">
-                      B — {slotBTitle}
+                      B: {slotBTitle}
                     </Text>
                     <Button
                       size="xs"

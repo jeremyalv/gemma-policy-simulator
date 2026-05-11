@@ -94,8 +94,9 @@ export default function DashboardPage() {
   }
 
   function handleRun(id: string) {
+    const title = simulations.find((s) => s.id === id)?.title
     setRunningId(id)
-    runMutation.mutate(id, {
+    runMutation.mutate({ id, title }, {
       onSettled: () => setRunningId(null),
     })
   }

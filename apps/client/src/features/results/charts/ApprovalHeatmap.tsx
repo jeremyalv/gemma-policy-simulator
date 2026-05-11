@@ -222,7 +222,7 @@ export function ApprovalHeatmap({ byAgeGroup }: ApprovalHeatmapProps) {
           <Text component="span" fw={600} c="var(--color-text-secondary)">Estimated distribution.</Text>{' '}
           Cell percentages are derived from each group's mean approval score using a Gaussian spread (σ=1.1).
           They are not directly counted from individual persona responses.
-          Treat these as indicative — not measured breakdowns.
+          Treat these as indicative, not measured breakdowns.
         </Text>
       </Box>
     </Box>

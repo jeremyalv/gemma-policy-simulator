@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Stack, Title, Text, Group, Button, Box,
   Tabs, Alert, Center, Skeleton, SimpleGrid, Affix, Transition,
@@ -85,6 +85,8 @@ function ResultsSkeleton() {
 export default function ResultsPage() {
   const { id: simulationId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const simulationTitle = (location.state as { title?: string } | null)?.title
   const [challengeOpen,  setChallengeOpen]  = useState(false)
 
   const { results, isLoading, isError, error, errorKind } = useSimulationResults(simulationId!)
@@ -186,7 +188,7 @@ export default function ResultsPage() {
         opened={challengeOpen}
         onClose={() => setChallengeOpen(false)}
         simulationId={simulationId!}
-        simulationTitle={results?.id}
+        simulationTitle={simulationTitle}
       />
 
       {/* ── Floating challenge FAB ───────────────────────────────────────── */}
@@ -238,7 +240,7 @@ export default function ResultsPage() {
             >
               Simulation Results
             </Title>
-            <Text size="sm" c="var(--color-text-secondary)" mt={4}>{simulationId}</Text>
+            <Text size="sm" c="var(--color-text-secondary)" mt={4}>{simulationTitle ?? simulationId}</Text>
           </Box>
 
           <Group gap="sm" wrap="wrap">
@@ -305,12 +307,12 @@ export default function ResultsPage() {
               </SectionCard>
 
               {/* Choropleth map */}
-              <SectionCard title="Approval by State — Map View">
+              <SectionCard title="Approval by State: Map View">
                 <USChoropleth byState={demographic_breakdown.by_state as Record<string, number>} />
               </SectionCard>
 
               {/* Sankey flow */}
-              <SectionCard title="Response Flow — Age → Emotion → Approval" subtitle="How age groups flow through emotional response to approval outcomes">
+              <SectionCard title="Response Flow: Age to Emotion to Approval" subtitle="How age groups flow through emotional response to approval outcomes">
                 <FlowSankey
                   data={sankeyData}
                   ageLayers={ageLayerCount}

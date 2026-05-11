@@ -24,7 +24,7 @@ export function FocusPicker({
         <Group gap={8} mb={4}>
           <Target size={16} color="var(--color-accent-primary)" />
           <Text fw={600} size="sm" c="var(--color-text-primary)">
-            {loopCount === 0 ? 'Choose a challenge focus' : `Choose a focus — Round ${loopCount + 1}`}
+            {loopCount === 0 ? 'Choose a challenge focus' : `Choose a focus: Round ${loopCount + 1}`}
           </Text>
         </Group>
         <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>

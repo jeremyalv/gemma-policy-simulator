@@ -37,7 +37,7 @@ function runtimeEstimate(n: number): string {
 // More personas reduce output variance; they do not increase statistical accuracy
 // in the traditional (sampling theory) sense.
 function accuracyLabel(n: number): string {
-  if (n < 100)  return 'Exploratory — high variance, indicative only'
+  if (n < 100)  return 'Exploratory: high variance, indicative only'
   if (n < 300)  return 'Preliminary — suitable for internal review'
   if (n < 700)  return 'Moderate — suitable for structured analysis'
   if (n < 1500) return 'Robust — lower variance across demographic segments'

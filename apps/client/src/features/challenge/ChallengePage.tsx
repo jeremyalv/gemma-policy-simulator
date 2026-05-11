@@ -56,7 +56,7 @@ export default function ChallengePage() {
           </Title>
           <Text size="sm" c="var(--color-text-secondary)" mt={4}>
             {flow.loopCount > 0
-              ? `Round ${flow.loopCount + 1} — challenge your policy assumptions again`
+              ? `Round ${flow.loopCount + 1}: challenge your policy assumptions again`
               : 'Let Gemma surface a weakness in your simulation results'}
           </Text>
         </Box>
@@ -64,7 +64,7 @@ export default function ChallengePage() {
         {/* Mock fallback banner */}
         {flow.isMockFallback && (
           <Alert icon={<AlertCircle size={14} />} color="yellow" variant="light">
-            Backend challenge endpoint is in development — showing mock response.
+            Backend challenge endpoint is in development; showing mock response.
           </Alert>
         )}
 

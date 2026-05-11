@@ -159,7 +159,7 @@ export default function ClarificationPage() {
           </Text>
           <Text size="xs" c="var(--color-text-tertiary)">
             {isDone
-              ? '✓ All done — starting simulation'
+              ? 'All done, starting simulation'
               : `Question ${Math.min(flow.currentTurn, MAX_TURNS)} of ${MAX_TURNS}`}
           </Text>
         </Group>
@@ -227,7 +227,7 @@ export default function ClarificationPage() {
               Hey there! 👋 Before we run the simulation, I'd love to ask a couple of quick questions
               about your policy. Your answers help me build a sharper, more accurate picture of how
               people will actually react to this.{'\n\n'}
-              Don't worry — it's just 1–3 short questions. You can skip any time if you'd rather jump
+              Don't worry, it's just 1–3 short questions. You can skip any time if you'd rather jump
               straight in.
             </ChatBubble>
 

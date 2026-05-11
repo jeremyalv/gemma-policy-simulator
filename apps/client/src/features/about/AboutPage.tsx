@@ -35,7 +35,7 @@ const PRINCIPLES = [
   },
   {
     title: 'Research-grade caveats',
-    body: 'InfiniPol is an exploration and ideation tool. Synthetic results are directional signals — always validate with primary research before making real policy decisions.',
+    body: 'InfiniPol is an exploration and ideation tool. Synthetic results are directional signals; always validate with primary research before making real policy decisions.',
   },
   {
     title: 'Privacy-first',
@@ -105,7 +105,7 @@ export default function AboutPage() {
               <Text size="md" c="var(--color-text-secondary)" lh={1.7} style={{ maxWidth: 560 }}>
                 InfiniPol is an open-source policy simulation platform that lets analysts,
                 researchers, and advocates pressure-test policy proposals against a synthetic
-                population of 300,000+ US personas — before a single real stakeholder sees them.
+                population of 300,000+ US personas, before a single real stakeholder sees them.
               </Text>
             </Stack>
 
@@ -127,7 +127,7 @@ export default function AboutPage() {
                 Good policy often fails not because the idea is wrong, but because its communication,
                 framing, or targeting missed the mark. Focus groups are expensive and slow.
                 Real polling requires months of lead time. InfiniPol provides a fast, repeatable
-                sandbox for testing how different demographic groups are likely to react — surfacing
+                sandbox for testing how different demographic groups are likely to react, surfacing
                 blind spots early, when changes are still cheap.
               </Text>
               <Text size="sm" c="var(--color-text-secondary)" lh={1.75}>

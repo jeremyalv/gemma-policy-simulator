@@ -40,7 +40,7 @@ export interface InstitutionConfig {
 const DEFAULT_CONFIG: InstitutionConfig = {
   name: 'InfiniPol',
   short_name: 'InfiniPol',
-  tagline: 'Infinite Policy Testing — simulate public response before it goes live.',
+  tagline: 'Infinite Policy Testing: simulate public response before it goes live.',
   logo_url: '/logos/infinipol-logo.svg',
   favicon_url: '/favicon.ico',
   theme: 'global-default',
@@ -98,7 +98,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Sync theme + title to DOM
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', config.theme)
-    document.title = `${config.name} — Policy Simulator`
+    document.title = config.name
   }, [config.theme, config.name])
 
   // Hold render until config is resolved (avoids flash with wrong theme)

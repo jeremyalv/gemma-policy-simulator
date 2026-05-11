@@ -16,13 +16,13 @@ export function useRunSimulation() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (id: string) => runSimulation(id),
+    mutationFn: ({ id }: { id: string; title?: string }) => runSimulation(id),
 
-    onSuccess: (_data, id) => {
+    onSuccess: (_data, { id, title }) => {
       // Invalidate list so status shows "running"
       queryClient.invalidateQueries({ queryKey: SIMULATIONS_QUERY_KEY })
-      // Navigate to progress view
-      navigate(`/simulations/${id}`)
+      // Navigate to progress view — carry title for display
+      navigate(`/simulations/${id}`, { state: { title } })
     },
 
     onError: (error: unknown) => {
