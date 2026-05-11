@@ -294,3 +294,45 @@ class SimulationStore:
                 ),
             )
             return int(cursor.rowcount)
+
+    def complete_simulation_run(
+        self,
+        *,
+        simulation_id: str,
+        completed_at: str,
+        mean_approval: float,
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE simulations
+                SET status = 'completed', completed_at = ?, mean_approval = ?
+                WHERE id = ? AND status = 'running'
+                """,
+                (
+                    completed_at,
+                    mean_approval,
+                    simulation_id,
+                ),
+            )
+            return int(cursor.rowcount)
+
+    def fail_simulation_run(
+        self,
+        *,
+        simulation_id: str,
+        completed_at: str,
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE simulations
+                SET status = 'failed', completed_at = ?
+                WHERE id = ? AND status = 'running'
+                """,
+                (
+                    completed_at,
+                    simulation_id,
+                ),
+            )
+            return int(cursor.rowcount)

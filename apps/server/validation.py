@@ -12,6 +12,7 @@ from packages.contracts.python.contracts_v1 import (
     RunSimulationRequest,
 )
 
+from .capability_registry import get_dataset_capabilities
 from .errors import ApiError
 
 SUPPORTED_DATASET = "nemotron_usa"
@@ -22,15 +23,6 @@ DEFAULT_PAGE = 1
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
 ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
-SUPPORTED_FILTER_KEYS = {
-    "states",
-    "age_range",
-    "sex",
-    "marital_status",
-    "education_level",
-    "occupation",
-}
-
 STRING_LIST_FILTER_KEYS = {
     "states",
     "sex",
@@ -55,14 +47,14 @@ def _validate_sample_size(value: Any) -> int:
     return value
 
 
-def _validate_filters(raw_filters: Any) -> FilterSet:
+def _validate_filters(raw_filters: Any, *, supported_filter_keys: set[str]) -> FilterSet:
     if raw_filters is None:
         return cast(FilterSet, {})
 
     if not isinstance(raw_filters, dict):
         raise ApiError("VALIDATION_ERROR", "filters must be an object")
 
-    unsupported_keys = sorted(set(raw_filters.keys()) - SUPPORTED_FILTER_KEYS)
+    unsupported_keys = sorted(set(raw_filters.keys()) - supported_filter_keys)
     if unsupported_keys:
         keys = ", ".join(unsupported_keys)
         raise ApiError("UNSUPPORTED_FILTER", f"Unsupported filter key(s): {keys}")
@@ -101,9 +93,15 @@ def validate_create_simulation_payload(payload: Any) -> CreateSimulationRequest:
 
     if dataset != SUPPORTED_DATASET:
         raise ApiError("VALIDATION_ERROR", f"dataset must be '{SUPPORTED_DATASET}'")
+    capabilities = get_dataset_capabilities(dataset)
+    if capabilities is None:
+        raise ApiError("VALIDATION_ERROR", f"dataset must be '{SUPPORTED_DATASET}'")
 
     sample_size = _validate_sample_size(payload.get("sample_size"))
-    filters = _validate_filters(payload.get("filters"))
+    filters = _validate_filters(
+        payload.get("filters"),
+        supported_filter_keys=set(capabilities.supported_filter_keys),
+    )
 
     request: dict[str, Any] = {
         "title": title,

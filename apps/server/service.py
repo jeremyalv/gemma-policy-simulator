@@ -5,7 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
@@ -32,6 +35,13 @@ from .clarification_generator import (
     generate_clarification_with_gemma,
 )
 from .errors import ApiError
+from .simulation_runner import (
+    SimulationRunError,
+    build_policy_prompt,
+    generate_personas,
+    generate_policy_response_with_ollama,
+    resolve_batch_size,
+)
 from .storage import SimulationStore
 
 MAX_CLARIFICATION_TURNS = 3
@@ -259,8 +269,14 @@ def list_simulation_history(
 
 
 def cleanup_simulation_artifacts(simulation_id: str) -> None:
-    """Cleanup hook for non-database simulation artifacts."""
-    _ = simulation_id
+    artifact_path = run_artifact_path(simulation_id)
+    artifact_path.unlink(missing_ok=True)
+
+
+def run_artifact_path(simulation_id: str, base_dir: Path | None = None) -> Path:
+    root = base_dir or Path("apps/server/data/artifacts")
+    root.mkdir(parents=True, exist_ok=True)
+    return root / f"{simulation_id}.json"
 
 
 def delete_simulation(store: SimulationStore, simulation_id: str) -> DeleteSimulationEnvelope:
@@ -553,6 +569,8 @@ def run_simulation(
             status_code=409,
         )
 
+    dispatch_run_worker(store.db_path, simulation_id)
+
     return _run_accepted_envelope(
         simulation_id=simulation_id,
         started_at=started_at,
@@ -560,6 +578,69 @@ def run_simulation(
         estimated_seconds=estimated_seconds,
         effective_sample_size=effective_sample_size,
     )
+
+
+def dispatch_run_worker(db_path: Path, simulation_id: str) -> None:
+    enabled = os.getenv("SIMS_RUN_WORKER_ENABLED", "1").strip().lower() not in {"0", "false", "off"}
+    if not enabled:
+        return
+    thread = threading.Thread(
+        target=execute_simulation_run,
+        kwargs={"db_path": db_path, "simulation_id": simulation_id},
+        daemon=True,
+        name=f"sims-run-{simulation_id}",
+    )
+    thread.start()
+
+
+def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
+    store = SimulationStore(db_path=db_path)
+    try:
+        simulation = store.fetch_simulation(simulation_id)
+        if simulation is None or simulation.get("status") != "running":
+            return
+
+        policy_text = cast(str, simulation.get(cast(str, simulation.get("run_prompt_source", "policy_text"))) or simulation["policy_text"])
+        effective_sample_size = int(simulation.get("effective_sample_size") or simulation["sample_size"])
+        filters = simulation.get("filters")
+
+        personas = generate_personas(
+            simulation_id=simulation_id,
+            count=effective_sample_size,
+            filters=filters if isinstance(filters, dict) else None,
+        )
+
+        outputs: list[dict[str, Any]] = []
+        batch_size = resolve_batch_size()
+        for start in range(0, len(personas), batch_size):
+            batch = personas[start : start + batch_size]
+            for persona in batch:
+                prompt = build_policy_prompt(policy_text=policy_text, persona=persona)
+                parsed = generate_policy_response_with_ollama(prompt)
+                outputs.append({"persona": persona, "response": parsed})
+
+        if not outputs:
+            raise SimulationRunError("no outputs generated")
+
+        artifact = {
+            "simulation_id": simulation_id,
+            "model": "gemma",
+            "output_count": len(outputs),
+            "raw_outputs": outputs,
+        }
+        run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
+
+        mean_approval = sum(float(item["response"]["approval"]) for item in outputs) / len(outputs)
+        store.complete_simulation_run(
+            simulation_id=simulation_id,
+            completed_at=utc_now_iso(),
+            mean_approval=mean_approval,
+        )
+    except Exception:
+        store.fail_simulation_run(
+            simulation_id=simulation_id,
+            completed_at=utc_now_iso(),
+        )
 
 
 def get_simulation_status(store: SimulationStore, simulation_id: str) -> SimulationStatusEnvelope:
