@@ -13,6 +13,10 @@ function envelope<T>(data: T, meta: Record<string, unknown> = {}) {
   return { data, error: null, meta: { request_id: `req_mock_${Date.now()}`, ...meta } }
 }
 
+function errorEnvelope(code: string, message: string) {
+  return { data: null, error: { code, message }, meta: { request_id: `req_mock_${Date.now()}` } }
+}
+
 function mockSimulation(overrides: Record<string, unknown> = {}) {
   return {
     id: `sim_${Math.random().toString(36).slice(2, 9)}`,
@@ -24,6 +28,44 @@ function mockSimulation(overrides: Record<string, unknown> = {}) {
     filters: { states: ['CA', 'TX'], age_range: [18, 65] },
     created_at: new Date().toISOString(),
     ...overrides,
+  }
+}
+
+// ── Status simulation helpers ─────────────────────────────────────────────────
+// Tracks when each simulation first appeared in the status poll (or was run).
+// Used to compute monotonically increasing progress for running simulations.
+const simStartTimes = new Map<string, number>()
+
+// Demo sim IDs with fixed terminal statuses (aligned with GET /simulations mock).
+//  pending:   1, 7   -- never run
+//  running:   2, 8   -- time-based progression via simStartTimes
+//  failed:    4, 10  -- terminal failure
+//  completed: 3, 5, 6, 9, 11, 12
+const DEMO_TERMINAL: Record<string, 'completed' | 'failed' | 'pending'> = {
+  sim_demo1:  'pending',   sim_demo7:  'pending',
+  sim_demo4:  'failed',    sim_demo10: 'failed',
+  sim_demo3:  'completed', sim_demo5:  'completed', sim_demo6:  'completed',
+  sim_demo9:  'completed', sim_demo11: 'completed', sim_demo12: 'completed',
+}
+
+/** Demo simulations complete in 30 seconds from first status poll or POST /run. */
+const DEMO_DURATION_MS = 30_000
+
+function makeStatusPayload(
+  id: string,
+  status: string,
+  pct: number,
+  etaSeconds: number,
+) {
+  return {
+    id,
+    status,
+    agents_total: 500,
+    agents_completed: Math.floor(pct * 5),
+    progress_pct: pct,
+    estimated_seconds_remaining: etaSeconds,
+    runtime_profile: 'balanced',
+    effective_sample_size: pct === 0 ? 0 : 480,
   }
 }
 
@@ -65,13 +107,16 @@ export const handlers = [
   }),
 
   // POST /simulations/:id/run → 202
+  // Records start time so the status handler can compute time-based progress.
   http.post(`${BASE}/simulations/:id/run`, ({ params }) => {
+    const id = params.id as string
+    simStartTimes.set(id, Date.now())
     return HttpResponse.json(
       envelope({
-        id: params.id,
+        id,
         status: 'running',
         started_at: new Date().toISOString(),
-        estimated_seconds: 75,
+        estimated_seconds: Math.ceil(DEMO_DURATION_MS / 1000),
         runtime_profile: 'balanced',
         effective_sample_size: 480,
       }),
@@ -79,27 +124,85 @@ export const handlers = [
     )
   }),
 
-  // GET /simulations/:id/status → 200 (simulates progression)
+  // GET /simulations/:id/status → 200
+  // Demo terminal states are fixed. Running sims use time-based progression.
   http.get(`${BASE}/simulations/:id/status`, ({ params }) => {
-    // Simulate progress based on time (for demo purposes)
-    const pct = Math.min(100, Math.floor(Math.random() * 100))
-    const isComplete = pct >= 95
-    return HttpResponse.json(envelope({
-      id: params.id,
-      status: isComplete ? 'completed' : 'running',
-      agents_total: 500,
-      agents_completed: Math.floor(pct * 5),
-      progress_pct: pct,
-      estimated_seconds_remaining: isComplete ? 0 : Math.floor((100 - pct) * 0.75),
-      runtime_profile: 'balanced',
-      effective_sample_size: 480,
-    }))
+    const id = params.id as string
+
+    // Fixed terminal states for demo sims
+    const terminal = DEMO_TERMINAL[id]
+    if (terminal === 'completed') {
+      return HttpResponse.json(envelope(makeStatusPayload(id, 'completed', 100, 0)))
+    }
+    if (terminal === 'failed') {
+      return HttpResponse.json(envelope(makeStatusPayload(id, 'failed', 17, 0)))
+    }
+    if (terminal === 'pending') {
+      return HttpResponse.json(envelope({
+        id, status: 'pending',
+        agents_total: 0, agents_completed: 0,
+        progress_pct: 0,
+        estimated_seconds_remaining: 0,
+        runtime_profile: 'balanced',
+        effective_sample_size: 0,
+      }))
+    }
+
+    // Running sims (sim_demo2, sim_demo8) and user-created sims: time-based progression.
+    // First poll records the start time; subsequent polls compute elapsed fraction.
+    if (!simStartTimes.has(id)) simStartTimes.set(id, Date.now())
+    const elapsed = Date.now() - simStartTimes.get(id)!
+    const pct     = Math.min(100, Math.floor((elapsed / DEMO_DURATION_MS) * 100))
+    const done    = pct >= 100
+    const etaSecs = done ? 0 : Math.ceil((DEMO_DURATION_MS - elapsed) / 1000)
+
+    return HttpResponse.json(envelope(makeStatusPayload(
+      id,
+      done ? 'completed' : 'running',
+      pct,
+      etaSecs,
+    )))
   }),
 
-  // GET /simulations/:id/results → 200
+  // GET /simulations/:id/results → 200 (or 409 for non-completed sims)
   http.get(`${BASE}/simulations/:id/results`, ({ params }) => {
+    const id = params.id as string
+
+    // Lifecycle gate: pending sims have never been run
+    const terminal = DEMO_TERMINAL[id]
+    if (terminal === 'pending') {
+      return HttpResponse.json(
+        errorEnvelope('SIMULATION_NOT_COMPLETE', 'Simulation has not been run yet.'),
+        { status: 409 },
+      )
+    }
+    if (terminal === 'failed') {
+      return HttpResponse.json(
+        errorEnvelope('SIMULATION_FAILED', 'Simulation failed. Retry or create a new simulation.'),
+        { status: 409 },
+      )
+    }
+
+    // Check if a running demo sim or user-created sim is still in progress
+    if (!terminal) {
+      const startTime = simStartTimes.get(id)
+      if (startTime && (Date.now() - startTime) < DEMO_DURATION_MS) {
+        return HttpResponse.json(
+          errorEnvelope('SIMULATION_NOT_COMPLETE', 'Simulation is still running.'),
+          { status: 409 },
+        )
+      }
+      // sim_demo2/8 with no recorded start = never run = treat as not complete
+      if (/^sim_demo(2|8)$/.test(id) && !startTime) {
+        return HttpResponse.json(
+          errorEnvelope('SIMULATION_NOT_COMPLETE', 'Simulation is still running.'),
+          { status: 409 },
+        )
+      }
+    }
+
     return HttpResponse.json(envelope({
-      id: params.id,
+      id,
       summary: {
         mean_approval: 3.2,
         approval_distribution: { '1': 80, '2': 95, '3': 150, '4': 110, '5': 65 },
@@ -167,7 +270,7 @@ export const handlers = [
           rationale: 'Mixed feelings. Good for the planet long-term but the impact on my delivery costs in the short-term is a real concern.',
         },
       ],
-      raw_responses_url: `/api/v1/simulations/${params.id}/export`,
+      raw_responses_url: `/api/v1/simulations/${id}/export`,
     }))
   }),
 
@@ -261,7 +364,6 @@ export const handlers = [
     const body = await request.json() as { user_response?: string }
     const response = (body.user_response ?? '').toLowerCase()
 
-    // Give slightly different followups based on what the user wrote
     const isDetailed   = response.length > 80
     const mentionsData = response.includes('data') || response.includes('evidence') || response.includes('study')
     const mentionsCost = response.includes('cost') || response.includes('rebate') || response.includes('subsid')
@@ -281,9 +383,26 @@ export const handlers = [
     }))
   }),
 
-  // GET /simulations/:id/export → 200 (CSV — NOT JSON envelope)
+  // GET /simulations/:id/export → CSV (NOT JSON envelope)
+  // Returns lifecycle error as JSON for non-completed sims.
   http.get(`${BASE}/simulations/:id/export`, ({ params }) => {
     const id = params.id as string
+
+    // Lifecycle gate: match results handler rules
+    const terminal = DEMO_TERMINAL[id]
+    if (terminal === 'pending') {
+      return HttpResponse.json(
+        errorEnvelope('SIMULATION_NOT_COMPLETE', 'Simulation has not been run yet.'),
+        { status: 409 },
+      )
+    }
+    if (terminal === 'failed') {
+      return HttpResponse.json(
+        errorEnvelope('SIMULATION_FAILED', 'Simulation failed. No export available.'),
+        { status: 409 },
+      )
+    }
+
     const csv = [
       'persona_id,age_group,region,income_bracket,education,approval_score,emotion,quote',
       `p001,25-34,Northeast,middle,bachelor,4,hope,"Generally positive about this policy direction."`,
@@ -319,7 +438,7 @@ export const handlers = [
       {
         id: 'infinipol_indo_v1',
         name: 'InfiniPol Indonesia V1',
-        description: 'Handmade synthetic dataset for Indonesia — 34 provinces',
+        description: 'Handmade synthetic dataset for Indonesia, 34 provinces',
         status: 'coming_v2',
       },
     ]))

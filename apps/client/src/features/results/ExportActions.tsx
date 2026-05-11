@@ -1,18 +1,20 @@
 /**
- * ExportActions — three export modes for simulation results.
- *  1. CSV  → direct <a href> download (no fetch, browser handles stream)
- *  2. PDF  → window.print() — print-only CSS in globals.css handles layout
- *  3. Link → Clipboard API copy of current URL
+ * ExportActions -- three export modes for simulation results.
+ *  1. CSV  -- fetch-based download with lifecycle error handling (409/404 toasts)
+ *  2. PDF  -- window.print(), print-only CSS in globals.css handles layout
+ *  3. Link -- Clipboard API copy of current URL
  *
- * CONTRACT: CSV export endpoint is the ONLY endpoint that doesn't use the
- * JSON envelope. Never call .json() on it. Use <a href> only.
+ * CONTRACT: The CSV export endpoint returns text/csv, not a JSON envelope.
+ * fetchSimulationCsv() handles the lifecycle-gated error cases (409/404)
+ * by inspecting the HTTP status before triggering the browser download.
  */
 
 import { useState } from 'react'
 import { Group, Button, Tooltip, Menu } from '@mantine/core'
 import { Download, Printer, Link2, Check } from 'lucide-react'
 import { notifications } from '@mantine/notifications'
-import { getExportUrl } from '@/api'
+import { fetchSimulationCsv } from '@/api'
+import { ApiError } from '@/lib/envelope'
 
 interface ExportActionsProps {
   simulationId: string
@@ -20,7 +22,33 @@ interface ExportActionsProps {
 }
 
 export function ExportActions({ simulationId, compact = false }: ExportActionsProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied,      setCopied]      = useState(false)
+  const [isDownloading, setDownloading] = useState(false)
+
+  async function handleCsvDownload() {
+    setDownloading(true)
+    try {
+      await fetchSimulationCsv(simulationId)
+    } catch (err) {
+      const isLifecycle = err instanceof ApiError && err.httpStatus === 409
+      const isNotFound  = err instanceof ApiError && err.httpStatus === 404
+      notifications.show({
+        title: isLifecycle
+          ? 'Export not ready'
+          : isNotFound
+          ? 'Simulation not found'
+          : 'Export failed',
+        message: isLifecycle
+          ? 'The simulation is not yet complete. Export will be available once it finishes.'
+          : isNotFound
+          ? 'This simulation no longer exists.'
+          : (err instanceof Error ? err.message : 'Could not download the CSV. Please try again.'),
+        color: isLifecycle ? 'orange' : 'red',
+      })
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   function handleCopyLink() {
     navigator.clipboard
@@ -64,11 +92,10 @@ export function ExportActions({ simulationId, compact = false }: ExportActionsPr
         <Menu.Dropdown>
           <Menu.Item
             leftSection={<Download size={14} />}
-            component="a"
-            href={getExportUrl(simulationId)}
-            download={`infinipol-${simulationId}-results.csv`}
+            disabled={isDownloading}
+            onClick={handleCsvDownload}
           >
-            Download CSV
+            {isDownloading ? 'Downloading...' : 'Download CSV'}
           </Menu.Item>
           <Menu.Item leftSection={<Printer size={14} />} onClick={handlePrint}>
             Export PDF (Print)
@@ -90,9 +117,9 @@ export function ExportActions({ simulationId, compact = false }: ExportActionsPr
         <Button
           size="sm"
           leftSection={<Download size={14} />}
-          component="a"
-          href={getExportUrl(simulationId)}
-          download={`infinipol-${simulationId}-results.csv`}
+          loading={isDownloading}
+          disabled={isDownloading}
+          onClick={handleCsvDownload}
           style={{ backgroundColor: 'var(--color-accent-primary)', color: '#fff' }}
         >
           CSV

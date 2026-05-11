@@ -1,5 +1,5 @@
 /**
- * FilterBar — client-side search + status filter for the simulation list.
+ * FilterBar -- client-side search, status filter, and sort for the simulation list.
  */
 
 import { Group, TextInput, Select } from '@mantine/core'
@@ -9,6 +9,7 @@ import type { SimulationStatus } from '@/api'
 export interface FilterState {
   search: string
   status: SimulationStatus | 'all'
+  sort:   string
 }
 
 interface FilterBarProps {
@@ -22,6 +23,13 @@ const STATUS_OPTIONS = [
   { value: 'running',   label: 'Running' },
   { value: 'completed', label: 'Completed' },
   { value: 'failed',    label: 'Failed' },
+]
+
+const SORT_OPTIONS = [
+  { value: '-created_at',    label: 'Newest first' },
+  { value: 'created_at',     label: 'Oldest first' },
+  { value: '-mean_approval', label: 'Highest approval' },
+  { value: 'mean_approval',  label: 'Lowest approval' },
 ]
 
 export function FilterBar({ value, onChange }: FilterBarProps) {
@@ -45,6 +53,18 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
         value={value.status}
         onChange={(v) => onChange({ ...value, status: (v ?? 'all') as FilterState['status'] })}
         w={160}
+        styles={{
+          input: {
+            backgroundColor: 'var(--color-bg-subtle)',
+            borderColor: 'var(--color-border-default)',
+          },
+        }}
+      />
+      <Select
+        data={SORT_OPTIONS}
+        value={value.sort}
+        onChange={(v) => onChange({ ...value, sort: v ?? '-created_at' })}
+        w={170}
         styles={{
           input: {
             backgroundColor: 'var(--color-bg-subtle)',

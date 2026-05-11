@@ -34,6 +34,27 @@ function applyFilters(
   })
 }
 
+function applySort(items: SimulationListItem[], sort: string): SimulationListItem[] {
+  const asc   = !sort.startsWith('-')
+  const field = sort.replace(/^-/, '')
+  return [...items].sort((a, b) => {
+    let va: string | number
+    let vb: string | number
+    if (field === 'created_at') {
+      va = a.created_at
+      vb = b.created_at
+    } else if (field === 'mean_approval') {
+      va = a.mean_approval ?? -1
+      vb = b.mean_approval ?? -1
+    } else {
+      return 0
+    }
+    if (va < vb) return asc ? -1 : 1
+    if (va > vb) return asc ? 1 : -1
+    return 0
+  })
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { simulations, isLoading, isError, error, refetch } = useSimulations()
@@ -41,16 +62,17 @@ export default function DashboardPage() {
   const deleteMutation = useDeleteSimulation()
   const runMutation    = useRunSimulation()
 
-  const [filter, setFilter] = useState<FilterState>({ search: '', status: 'all' })
+  const [filter, setFilter] = useState<FilterState>({ search: '', status: 'all', sort: '-created_at' })
   const [page, setPage] = useState(1)
 
   // Track which row is in a loading state for button feedback
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [runningId,  setRunningId]  = useState<string | null>(null)
 
-  const filtered  = useMemo(() => applyFilters(simulations, filter), [simulations, filter])
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const filtered   = useMemo(() => applyFilters(simulations, filter), [simulations, filter])
+  const sorted     = useMemo(() => applySort(filtered, filter.sort), [filtered, filter.sort])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated  = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // Clamp current page when totalPages shrinks (e.g. after deleting the last
   // item on the current page, or when filters narrow the result set).
@@ -98,7 +120,7 @@ export default function DashboardPage() {
             <Text size="sm" c="var(--color-text-secondary)" mt={4}>
               {isLoading
                 ? 'Loading…'
-                : `${filtered.length} simulation${filtered.length !== 1 ? 's' : ''}${
+                : `${sorted.length} simulation${sorted.length !== 1 ? 's' : ''}${
                     filter.search || filter.status !== 'all' ? ' matching filters' : ''
                   }`}
             </Text>
@@ -161,7 +183,7 @@ export default function DashboardPage() {
         <FilterBar value={filter} onChange={handleFilterChange} />
 
         {/* ── Table or empty state ─────────────────────────────── */}
-        {!isError && !isLoading && filtered.length === 0 ? (
+        {!isError && !isLoading && sorted.length === 0 ? (
           simulations.length === 0 ? (
             <EmptyState
               title="No simulations yet"
@@ -177,7 +199,7 @@ export default function DashboardPage() {
               description="Try adjusting your search or status filter."
               action={{
                 label: 'Clear filters',
-                onClick: () => handleFilterChange({ search: '', status: 'all' }),
+                onClick: () => handleFilterChange({ search: '', status: 'all', sort: '-created_at' }),
               }}
             />
           )

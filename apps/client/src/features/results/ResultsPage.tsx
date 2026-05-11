@@ -87,7 +87,7 @@ export default function ResultsPage() {
   const navigate = useNavigate()
   const [challengeOpen,  setChallengeOpen]  = useState(false)
 
-  const { results, isLoading, isError, error } = useSimulationResults(simulationId!)
+  const { results, isLoading, isError, error, errorKind } = useSimulationResults(simulationId!)
 
   const sankeyData = useMemo(() => {
     if (!results) return { nodes: [], links: [] }
@@ -101,6 +101,63 @@ export default function ResultsPage() {
 
   // ── Error ────────────────────────────────────────────────────────────────
   if (isError || !results) {
+    // Simulation not complete yet (still running, pending, or failed)
+    if (errorKind === 'lifecycle_conflict') {
+      return (
+        <Layout>
+          <Center h={400}>
+            <Stack align="center" gap="lg" maw={440}>
+              <Alert
+                icon={<AlertCircle size={16} />}
+                color="orange"
+                title="Simulation not complete"
+                w="100%"
+              >
+                This simulation has not finished yet, or encountered a failure.
+                Check the status page to see the current state and retry if needed.
+              </Alert>
+              <Button
+                leftSection={<ArrowLeft size={14} />}
+                onClick={() => navigate(`/simulations/${simulationId}`)}
+                style={{ backgroundColor: 'var(--color-accent-primary)', color: '#fff' }}
+              >
+                View Status
+              </Button>
+            </Stack>
+          </Center>
+        </Layout>
+      )
+    }
+
+    // Simulation deleted or never existed
+    if (errorKind === 'not_found') {
+      return (
+        <Layout>
+          <Center h={400}>
+            <Stack align="center" gap="lg" maw={440}>
+              <Alert
+                icon={<AlertCircle size={16} />}
+                color="gray"
+                title="Simulation not found"
+                w="100%"
+              >
+                This simulation no longer exists. It may have been deleted.
+              </Alert>
+              <Button
+                variant="subtle"
+                color="gray"
+                leftSection={<ArrowLeft size={14} />}
+                onClick={() => navigate('/simulations')}
+              >
+                Back to Simulations
+              </Button>
+            </Stack>
+          </Center>
+        </Layout>
+      )
+    }
+
+    // Generic error (backend down, network, etc.)
     return (
       <Layout>
         <Center h={400}>

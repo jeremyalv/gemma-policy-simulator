@@ -20,9 +20,10 @@ import {
   Card,
 } from '@mantine/core'
 import {
-  CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Lightbulb,
+  CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Lightbulb, Plus, ArrowLeft,
 } from 'lucide-react'
-import { runSimulation } from '@/api'
+import { runSimulation, ApiError } from '@/api'
+import { isBackendDownError, BACKEND_DOWN_MESSAGE } from '@/lib/api-errors'
 import { generateIdempotencyKey } from '@/lib/idempotency'
 import { formatNumber, formatDuration } from '@/lib/format'
 import { notifications } from '@mantine/notifications'
@@ -134,7 +135,7 @@ export default function ProgressPage() {
   const navigate = useNavigate()
   const [isRetrying, setIsRetrying] = useState(false)
 
-  const { statusData, isLoading, isError, error } = useStatusPolling({
+  const { statusData, isLoading, isError, error, errorKind } = useStatusPolling({
     simulationId: simulationId!,
     autoRedirect: true,
   })
@@ -146,11 +147,16 @@ export default function ProgressPage() {
     try {
       await runSimulation(simulationId, {}, generateIdempotencyKey())
       // Polling will pick up the new 'running' status automatically
-    } catch {
+    } catch (err) {
+      const is409 = err instanceof ApiError && err.httpStatus === 409
       notifications.show({
-        title: 'Retry failed',
-        message: 'Could not restart simulation. Please try again.',
-        color: 'red',
+        title:   is409 ? 'Cannot retry' : 'Retry failed',
+        message: is409
+          ? 'This simulation is already running or has completed.'
+          : isBackendDownError(err)
+          ? BACKEND_DOWN_MESSAGE
+          : 'Could not restart simulation. Please try again.',
+        color: is409 ? 'orange' : 'red',
       })
     } finally {
       setIsRetrying(false)
@@ -175,17 +181,31 @@ export default function ProgressPage() {
 
   // ── Error fetching status ─────────────────────────────────────────────────
   if (isError) {
+    const isNotFound = errorKind === 'not_found'
     return (
       <Layout>
         <Center h={400}>
-          <Alert
-            icon={<AlertCircle size={16} />}
-            color="red"
-            title="Could not load simulation status"
-            maw={440}
-          >
-            {(error as Error)?.message ?? 'Unknown error.'}
-          </Alert>
+          <Stack gap="lg" align="center" maw={440}>
+            <Alert
+              icon={<AlertCircle size={16} />}
+              color={isNotFound ? 'gray' : 'red'}
+              title={isNotFound ? 'Simulation not found' : 'Could not load simulation status'}
+              w="100%"
+            >
+              {isNotFound
+                ? 'This simulation does not exist or has been deleted.'
+                : ((error as Error)?.message ?? 'Unknown error.')}
+            </Alert>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="sm"
+              leftSection={<ArrowLeft size={14} />}
+              onClick={() => navigate('/simulations')}
+            >
+              Back to Simulations
+            </Button>
+          </Stack>
         </Center>
       </Layout>
     )
@@ -323,17 +343,32 @@ export default function ProgressPage() {
             {/* ── Actions ───────────────────────────────────────── */}
             <Group justify="center" gap="sm">
               {isFailed && (
-                <Button
-                  leftSection={<RefreshCw size={14} />}
-                  loading={isRetrying}
-                  onClick={handleRetry}
-                  style={{
-                    backgroundColor: 'var(--color-accent-primary)',
-                    color: '#fff',
-                  }}
-                >
-                  Retry Simulation
-                </Button>
+                <>
+                  <Button
+                    leftSection={<RefreshCw size={14} />}
+                    loading={isRetrying}
+                    disabled={isRetrying}
+                    onClick={handleRetry}
+                    style={{
+                      backgroundColor: 'var(--color-accent-primary)',
+                      color: '#fff',
+                    }}
+                  >
+                    Retry Simulation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    leftSection={<Plus size={14} />}
+                    disabled={isRetrying}
+                    onClick={() => navigate('/simulations/new')}
+                    style={{
+                      borderColor: 'var(--color-border-default)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    Create New
+                  </Button>
+                </>
               )}
               {isCompleted && (
                 <Button
