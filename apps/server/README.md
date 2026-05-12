@@ -54,9 +54,9 @@ Create `.env` at repo root:
 
 ```env
 SIMS_OLLAMA_BASE_URL=http://localhost:11434
-SIMS_OLLAMA_MODEL=gemma4:e2b
-SIMS_OLLAMA_TIMEOUT_SECONDS=60
-SIMS_BATCH_SIZE=8
+SIMS_RUN_MODEL=gemma4:e2b
+SIMS_RUN_TIMEOUT_SECONDS=60
+SIMS_RUN_BATCH_SIZE=8
 SIMS_RUN_MAX_RETRIES=1
 
 SIMS_DATASET_NEMOTRON_PATH=data/nemotron_usa/nemotron_usa.jsonl
@@ -66,6 +66,10 @@ SIMS_DATASET_NEMOTRON_VERSION=Nemotron-Personas-USA
 Notes:
 - `SIMS_DATASET_NEMOTRON_PATH` should point to your local Nemotron USA dataset file/folder.
 - Recommended local format today: `.jsonl`.
+- Backward-compatible aliases are also accepted:
+  - `SIMS_OLLAMA_MODEL` -> `SIMS_RUN_MODEL`
+  - `SIMS_OLLAMA_TIMEOUT_SECONDS` -> `SIMS_RUN_TIMEOUT_SECONDS`
+  - `SIMS_BATCH_SIZE` -> `SIMS_RUN_BATCH_SIZE`
 
 ### 4. Start backend server
 
@@ -73,7 +77,7 @@ From repo root:
 
 ```bash
 source .venv/bin/activate
-uvicorn apps.server.main:app --reload --host 0.0.0.0 --port 8000
+python3 -m uvicorn apps.server.app:app --host 0.0.0.0 --port 8000 --reload --env-file .env
 ```
 
 ### 5. Quick backend smoke test
@@ -90,3 +94,21 @@ Then run the normal flow:
 3. Poll `GET /api/v1/simulations/{id}/status`
 4. `GET /api/v1/simulations/{id}/results`
 5. `GET /api/v1/simulations/{id}/export`
+
+Or run the automated end-to-end smoke script:
+
+```bash
+./scripts/smoke_e2e.sh
+```
+
+Optional overrides:
+
+```bash
+BASE_URL=http://localhost:8000 \
+TIMEOUT_SECONDS=300 \
+POLL_SECONDS=2 \
+SAMPLE_SIZE=100 \
+./scripts/smoke_e2e.sh
+```
+
+The script saves request/response artifacts under `/tmp/infinipol-smoke/run-<timestamp>/`.
