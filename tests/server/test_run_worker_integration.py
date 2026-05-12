@@ -147,6 +147,12 @@ def test_run_worker_eventually_completes_and_writes_artifact(
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 12,
+        "success_count": 12,
+        "failed_count": 0,
+        "success_rate": 1.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 
@@ -212,20 +218,25 @@ def test_run_worker_failure_marks_failed(tmp_path: Path, monkeypatch: pytest.Mon
     assert row is not None
     assert row[0] == "failed"
     assert isinstance(row[1], str) and row[1]
-    assert row[2] == 1
+    assert row[2] == 5
     assert row[3] == 0
-    assert row[4] == "RUNTIME_ERROR"
+    assert row[4] == "INSUFFICIENT_SUCCESS_RATE"
     assert isinstance(row[5], str) and row[5]
-    assert row[6] == "p_sim_async_fail_00001"
+    assert row[6] == "p_sim_async_fail_00005"
 
     artifact = run_artifact_path("sim_async_fail")
     assert artifact.exists()
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     assert payload["output_count"] == 0
-    assert payload["run_telemetry"]["retry_count"] == 1
+    assert payload["run_telemetry"]["retry_count"] == 5
     assert payload["run_telemetry"]["invalid_output_count"] == 0
-    assert payload["run_telemetry"]["failure_code"] == "RUNTIME_ERROR"
-    assert payload["run_telemetry"]["failed_persona_id"] == "p_sim_async_fail_00001"
+    assert payload["run_telemetry"]["failure_code"] == "INSUFFICIENT_SUCCESS_RATE"
+    assert payload["run_telemetry"]["attempted_count"] == 5
+    assert payload["run_telemetry"]["success_count"] == 0
+    assert payload["run_telemetry"]["failed_count"] == 5
+    assert payload["run_telemetry"]["success_rate"] == 0.0
+    assert payload["run_telemetry"]["is_partial"] is False
+    assert payload["run_telemetry"]["failure_breakdown"] == {"RUNTIME_ERROR": 5}
 
 
 def test_run_worker_parse_retry_then_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -260,6 +271,11 @@ def test_run_worker_parse_retry_then_success(tmp_path: Path, monkeypatch: pytest
     assert telemetry["retry_count"] == 1
     assert telemetry["invalid_output_count"] == 1
     assert telemetry["failure_code"] is None
+    assert telemetry["attempted_count"] == 1
+    assert telemetry["success_count"] == 1
+    assert telemetry["failed_count"] == 0
+    assert telemetry["success_rate"] == 1.0
+    assert telemetry["is_partial"] is False
 
 
 def test_run_worker_runtime_retry_then_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -289,6 +305,11 @@ def test_run_worker_runtime_retry_then_success(tmp_path: Path, monkeypatch: pyte
     assert telemetry["retry_count"] == 1
     assert telemetry["invalid_output_count"] == 0
     assert telemetry["failure_code"] is None
+    assert telemetry["attempted_count"] == 1
+    assert telemetry["success_count"] == 1
+    assert telemetry["failed_count"] == 0
+    assert telemetry["success_rate"] == 1.0
+    assert telemetry["is_partial"] is False
 
 
 def test_run_worker_parse_failure_after_retries_marks_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -315,17 +336,23 @@ def test_run_worker_parse_failure_after_retries_marks_failed(tmp_path: Path, mon
     polled = _poll_status(client, "sim_parse_retry_fail")
     assert polled["data"]["status"] == "failed"
     telemetry = polled["data"]["run_telemetry"]
-    assert telemetry["retry_count"] == 1
-    assert telemetry["invalid_output_count"] == 2
-    assert telemetry["failure_code"] == "PARSE_ERROR"
-    assert telemetry["failed_persona_id"] == "p_sim_parse_retry_fail_00001"
+    assert telemetry["retry_count"] == 5
+    assert telemetry["invalid_output_count"] == 10
+    assert telemetry["failure_code"] == "INSUFFICIENT_SUCCESS_RATE"
+    assert telemetry["failed_persona_id"] == "p_sim_parse_retry_fail_00005"
+    assert telemetry["attempted_count"] == 5
+    assert telemetry["success_count"] == 0
+    assert telemetry["failed_count"] == 5
+    assert telemetry["success_rate"] == 0.0
+    assert telemetry["is_partial"] is False
+    assert telemetry["failure_breakdown"] == {"PARSE_ERROR": 5}
 
     artifact = run_artifact_path("sim_parse_retry_fail")
     assert artifact.exists()
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     assert payload["output_count"] == 0
-    assert payload["run_telemetry"]["failure_code"] == "PARSE_ERROR"
-    assert payload["run_telemetry"]["failed_persona_id"] == "p_sim_parse_retry_fail_00001"
+    assert payload["run_telemetry"]["failure_code"] == "INSUFFICIENT_SUCCESS_RATE"
+    assert payload["run_telemetry"]["failed_persona_id"] == "p_sim_parse_retry_fail_00005"
 
 
 def test_delete_simulation_removes_run_artifact(tmp_path: Path) -> None:

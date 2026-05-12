@@ -189,11 +189,17 @@ class RunSimulationRequest(TypedDict, total=False):
     use_refined_prompt: NotRequired[bool]
 
 class RunTelemetry(TypedDict, total=False):
+    attempted_count: Required[int]
+    failed_count: Required[int]
     failed_persona_id: Required[str | None]
+    failure_breakdown: Required[dict[str, int]]
     failure_code: Required[str | None]
     failure_message: Required[str | None]
     invalid_output_count: Required[int]
+    is_partial: Required[bool]
     retry_count: Required[int]
+    success_count: Required[int]
+    success_rate: Required[float]
 
 RuntimeProfile = Literal['interactive', 'balanced', 'thorough', 'auto']
 class SimulationDraft(TypedDict, total=False):

@@ -975,7 +975,13 @@
           "invalid_output_count",
           "failure_code",
           "failure_message",
-          "failed_persona_id"
+          "failed_persona_id",
+          "attempted_count",
+          "success_count",
+          "failed_count",
+          "success_rate",
+          "is_partial",
+          "failure_breakdown"
         ],
         "properties": {
           "retry_count": {
@@ -1001,6 +1007,27 @@
               "string",
               "null"
             ]
+          },
+          "attempted_count": {
+            "type": "integer"
+          },
+          "success_count": {
+            "type": "integer"
+          },
+          "failed_count": {
+            "type": "integer"
+          },
+          "success_rate": {
+            "type": "number"
+          },
+          "is_partial": {
+            "type": "boolean"
+          },
+          "failure_breakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
           }
         }
       },

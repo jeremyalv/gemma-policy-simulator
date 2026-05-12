@@ -184,7 +184,16 @@ Response `200`:
       "invalid_output_count": 1,
       "failure_code": null,
       "failure_message": null,
-      "failed_persona_id": null
+      "failed_persona_id": null,
+      "attempted_count": 500,
+      "success_count": 497,
+      "failed_count": 3,
+      "success_rate": 0.994,
+      "is_partial": true,
+      "failure_breakdown": {
+        "RUNTIME_ERROR": 2,
+        "PARSE_ERROR": 1
+      }
     }
   },
   "error": null,
@@ -194,6 +203,11 @@ Response `200`:
   }
 }
 ```
+
+Partial-success policy (MVP):
+- Runs are marked `completed` when `success_rate >= 0.90` and at least one persona succeeded.
+- Runs are marked `failed` when `success_rate < 0.90` or no persona succeeded.
+- `run_telemetry` always exposes quality counters so clients can show run-quality warnings.
 
 ### GET `/simulations/{id}/results`
 Fetch full aggregated results once status is `completed`.

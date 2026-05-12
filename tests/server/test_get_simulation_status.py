@@ -117,6 +117,12 @@ def test_get_simulation_status_running_progress(monkeypatch: pytest.MonkeyPatch,
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 
@@ -141,6 +147,12 @@ def test_get_simulation_status_pending_returns_zero_progress(tmp_path: Path) -> 
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 
@@ -170,6 +182,12 @@ def test_get_simulation_status_completed_returns_terminal_progress(tmp_path: Pat
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 
@@ -213,6 +231,12 @@ def test_get_simulation_status_failed_with_timing_returns_partial_progress(
         "failure_code": "PARSE_ERROR",
         "failure_message": "model output was not valid JSON",
         "failed_persona_id": "p_sim_failed_00001",
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 
@@ -267,6 +291,12 @@ def test_get_simulation_status_back_compat_fallback_when_run_fields_missing(
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
 
 

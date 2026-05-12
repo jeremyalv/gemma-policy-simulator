@@ -7,6 +7,7 @@ import json
 import math
 import os
 import threading
+from collections import Counter
 from csv import DictWriter
 from datetime import datetime, timezone
 from io import StringIO
@@ -57,6 +58,7 @@ from src.persona_engine.nemotron_usa import DatasetLoadError, sample_personas
 
 MAX_CLARIFICATION_TURNS = 3
 ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
+PARTIAL_SUCCESS_THRESHOLD = 0.9
 
 
 def new_simulation_id() -> str:
@@ -190,12 +192,34 @@ def _status_run_telemetry(simulation: dict[str, Any]) -> dict[str, Any]:
     failure_code = simulation.get("run_failure_code")
     failure_message = simulation.get("run_failure_message")
     failed_persona_id = simulation.get("run_failed_persona_id")
+    attempted_count = simulation.get("run_attempted_count")
+    success_count = simulation.get("run_success_count")
+    failed_count = simulation.get("run_failed_count")
+    success_rate = simulation.get("run_success_rate")
+    is_partial = simulation.get("run_is_partial")
+    failure_breakdown_json = simulation.get("run_failure_breakdown_json")
+    failure_breakdown: dict[str, int] = {}
+    if isinstance(failure_breakdown_json, str) and failure_breakdown_json.strip():
+        try:
+            parsed = json.loads(failure_breakdown_json)
+        except json.JSONDecodeError:
+            parsed = {}
+        if isinstance(parsed, dict):
+            for key, value in parsed.items():
+                if isinstance(key, str) and isinstance(value, int) and value >= 0:
+                    failure_breakdown[key] = value
     return {
         "retry_count": int(retry_count) if isinstance(retry_count, int) and retry_count >= 0 else 0,
         "invalid_output_count": int(invalid_output_count) if isinstance(invalid_output_count, int) and invalid_output_count >= 0 else 0,
         "failure_code": failure_code if isinstance(failure_code, str) and failure_code else None,
         "failure_message": failure_message if isinstance(failure_message, str) and failure_message else None,
         "failed_persona_id": failed_persona_id if isinstance(failed_persona_id, str) and failed_persona_id else None,
+        "attempted_count": int(attempted_count) if isinstance(attempted_count, int) and attempted_count >= 0 else 0,
+        "success_count": int(success_count) if isinstance(success_count, int) and success_count >= 0 else 0,
+        "failed_count": int(failed_count) if isinstance(failed_count, int) and failed_count >= 0 else 0,
+        "success_rate": float(success_rate) if isinstance(success_rate, (float, int)) and float(success_rate) >= 0 else 0.0,
+        "is_partial": bool(is_partial) if isinstance(is_partial, int) else False,
+        "failure_breakdown": failure_breakdown,
     }
 
 
@@ -687,12 +711,19 @@ def dispatch_run_worker(db_path: Path, simulation_id: str) -> None:
 def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
     store = SimulationStore(db_path=db_path)
     outputs: list[dict[str, Any]] = []
+    failure_breakdown: Counter[str] = Counter()
     telemetry = {
         "retry_count": 0,
         "invalid_output_count": 0,
         "failure_code": None,
         "failure_message": None,
         "failed_persona_id": None,
+        "attempted_count": 0,
+        "success_count": 0,
+        "failed_count": 0,
+        "success_rate": 0.0,
+        "is_partial": False,
+        "failure_breakdown": {},
     }
     try:
         simulation = store.fetch_simulation(simulation_id)
@@ -715,9 +746,14 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             for persona in batch:
                 prompt = build_policy_prompt(policy_text=policy_text, persona=persona)
                 attempts = 0
+                telemetry["attempted_count"] += 1
+                persona_success = False
+                parsed: dict[str, Any] | None = None
                 while True:
                     try:
                         parsed = generate_policy_response_with_ollama(prompt)
+                        telemetry["success_count"] += 1
+                        persona_success = True
                         break
                     except Exception as exc:
                         run_error = _normalize_retry_error(exc)
@@ -734,11 +770,31 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
                         persona_id = persona.get("persona_id")
                         if isinstance(persona_id, str) and persona_id:
                             telemetry["failed_persona_id"] = persona_id
-                        raise run_error
-                outputs.append({"persona": persona, "response": parsed})
+                        telemetry["failed_count"] += 1
+                        failure_breakdown[telemetry["failure_code"]] += 1
+                        break
+                if persona_success and parsed is not None:
+                    outputs.append({"persona": persona, "response": parsed})
 
-        if not outputs:
-            raise SimulationRunError("no outputs generated", code="EMPTY_OUTPUT", retryable=False, invalid_output=False)
+        attempted_count = int(telemetry["attempted_count"])
+        success_count = int(telemetry["success_count"])
+        failed_count = int(telemetry["failed_count"])
+        success_rate = (success_count / attempted_count) if attempted_count > 0 else 0.0
+        telemetry["success_rate"] = success_rate
+        telemetry["is_partial"] = success_count > 0 and failed_count > 0
+        telemetry["failure_breakdown"] = dict(failure_breakdown)
+        completed = success_count > 0 and success_rate >= PARTIAL_SUCCESS_THRESHOLD
+        if completed:
+            telemetry["failure_code"] = None
+            telemetry["failure_message"] = None
+            telemetry["failed_persona_id"] = None
+        else:
+            telemetry["failure_code"] = "INSUFFICIENT_SUCCESS_RATE"
+            telemetry["failure_message"] = (
+                f"success rate {success_rate:.2f} below required {PARTIAL_SUCCESS_THRESHOLD:.2f}"
+                if attempted_count > 0
+                else f"success rate 0.00 below required {PARTIAL_SUCCESS_THRESHOLD:.2f}"
+            )
 
         artifact = {
             "simulation_id": simulation_id,
@@ -751,14 +807,37 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
         }
         run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
 
-        mean_approval = sum(float(item["response"]["approval"]) for item in outputs) / len(outputs)
-        store.complete_simulation_run(
-            simulation_id=simulation_id,
-            completed_at=utc_now_iso(),
-            mean_approval=mean_approval,
-            run_retry_count=int(telemetry["retry_count"]),
-            run_invalid_output_count=int(telemetry["invalid_output_count"]),
-        )
+        if completed:
+            mean_approval = sum(float(item["response"]["approval"]) for item in outputs) / len(outputs)
+            store.complete_simulation_run(
+                simulation_id=simulation_id,
+                completed_at=utc_now_iso(),
+                mean_approval=mean_approval,
+                run_retry_count=int(telemetry["retry_count"]),
+                run_invalid_output_count=int(telemetry["invalid_output_count"]),
+                run_attempted_count=attempted_count,
+                run_success_count=success_count,
+                run_failed_count=failed_count,
+                run_success_rate=float(success_rate),
+                run_is_partial=bool(telemetry["is_partial"]),
+                run_failure_breakdown_json=json.dumps(dict(failure_breakdown), sort_keys=True),
+            )
+        else:
+            store.fail_simulation_run(
+                simulation_id=simulation_id,
+                completed_at=utc_now_iso(),
+                run_retry_count=int(telemetry["retry_count"]),
+                run_invalid_output_count=int(telemetry["invalid_output_count"]),
+                run_failure_code=cast(str, telemetry["failure_code"]),
+                run_failure_message=cast(str, telemetry["failure_message"]),
+                run_failed_persona_id=cast(str | None, telemetry["failed_persona_id"]),
+                run_attempted_count=attempted_count,
+                run_success_count=success_count,
+                run_failed_count=failed_count,
+                run_success_rate=float(success_rate),
+                run_is_partial=bool(telemetry["is_partial"]),
+                run_failure_breakdown_json=json.dumps(dict(failure_breakdown), sort_keys=True),
+            )
     except Exception as exc:
         if telemetry["failure_code"] is None:
             run_error = exc if isinstance(exc, SimulationRunError) else SimulationRunError("unexpected run worker error", code="UNKNOWN_ERROR")
@@ -772,10 +851,17 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             "sampling_seed": simulation.get("run_sampling_seed") if "simulation" in locals() and isinstance(simulation, dict) else None,
             "output_count": len(outputs),
             "raw_outputs": outputs,
-            "run_telemetry": telemetry,
+            "run_telemetry": {
+                **telemetry,
+                "failure_breakdown": dict(failure_breakdown),
+            },
         }
         run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
 
+        attempted_count = int(telemetry["attempted_count"]) if isinstance(telemetry.get("attempted_count"), int) else len(outputs)
+        success_count = int(telemetry["success_count"]) if isinstance(telemetry.get("success_count"), int) else len(outputs)
+        failed_count = int(telemetry["failed_count"]) if isinstance(telemetry.get("failed_count"), int) else 0
+        success_rate = (success_count / attempted_count) if attempted_count > 0 else 0.0
         store.fail_simulation_run(
             simulation_id=simulation_id,
             completed_at=utc_now_iso(),
@@ -784,6 +870,12 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             run_failure_code=cast(str, telemetry["failure_code"]),
             run_failure_message=cast(str, telemetry["failure_message"]),
             run_failed_persona_id=cast(str | None, telemetry["failed_persona_id"]),
+            run_attempted_count=attempted_count,
+            run_success_count=success_count,
+            run_failed_count=failed_count,
+            run_success_rate=float(success_rate),
+            run_is_partial=success_count > 0 and failed_count > 0,
+            run_failure_breakdown_json=json.dumps(dict(failure_breakdown), sort_keys=True),
         )
 
 

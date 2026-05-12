@@ -49,6 +49,12 @@ class SimulationStore:
                     run_failure_code TEXT,
                     run_failure_message TEXT,
                     run_failed_persona_id TEXT,
+                    run_attempted_count INTEGER NOT NULL DEFAULT 0,
+                    run_success_count INTEGER NOT NULL DEFAULT 0,
+                    run_failed_count INTEGER NOT NULL DEFAULT 0,
+                    run_success_rate REAL NOT NULL DEFAULT 0,
+                    run_is_partial INTEGER NOT NULL DEFAULT 0,
+                    run_failure_breakdown_json TEXT,
                     run_dataset_version TEXT,
                     run_sampling_seed INTEGER,
                     clarification_status TEXT NOT NULL DEFAULT 'none',
@@ -99,6 +105,18 @@ class SimulationStore:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_failure_message TEXT")
             if "run_failed_persona_id" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_failed_persona_id TEXT")
+            if "run_attempted_count" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_attempted_count INTEGER NOT NULL DEFAULT 0")
+            if "run_success_count" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_success_count INTEGER NOT NULL DEFAULT 0")
+            if "run_failed_count" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_failed_count INTEGER NOT NULL DEFAULT 0")
+            if "run_success_rate" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_success_rate REAL NOT NULL DEFAULT 0")
+            if "run_is_partial" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_is_partial INTEGER NOT NULL DEFAULT 0")
+            if "run_failure_breakdown_json" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_failure_breakdown_json TEXT")
             if "run_dataset_version" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_dataset_version TEXT")
             if "run_sampling_seed" not in existing_columns:
@@ -179,6 +197,12 @@ class SimulationStore:
             "run_failure_code": row["run_failure_code"],
             "run_failure_message": row["run_failure_message"],
             "run_failed_persona_id": row["run_failed_persona_id"],
+            "run_attempted_count": row["run_attempted_count"],
+            "run_success_count": row["run_success_count"],
+            "run_failed_count": row["run_failed_count"],
+            "run_success_rate": row["run_success_rate"],
+            "run_is_partial": row["run_is_partial"],
+            "run_failure_breakdown_json": row["run_failure_breakdown_json"],
             "run_dataset_version": row["run_dataset_version"],
             "run_sampling_seed": row["run_sampling_seed"],
             "clarification_status": row["clarification_status"],
@@ -326,7 +350,13 @@ class SimulationStore:
                     run_invalid_output_count = 0,
                     run_failure_code = NULL,
                     run_failure_message = NULL,
-                    run_failed_persona_id = NULL
+                    run_failed_persona_id = NULL,
+                    run_attempted_count = 0,
+                    run_success_count = 0,
+                    run_failed_count = 0,
+                    run_success_rate = 0,
+                    run_is_partial = 0,
+                    run_failure_breakdown_json = NULL
                 WHERE id = ? AND status = 'pending'
                 """,
                 (
@@ -352,6 +382,12 @@ class SimulationStore:
         mean_approval: float,
         run_retry_count: int,
         run_invalid_output_count: int,
+        run_attempted_count: int,
+        run_success_count: int,
+        run_failed_count: int,
+        run_success_rate: float,
+        run_is_partial: bool,
+        run_failure_breakdown_json: str,
     ) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
@@ -363,6 +399,12 @@ class SimulationStore:
                     mean_approval = ?,
                     run_retry_count = ?,
                     run_invalid_output_count = ?,
+                    run_attempted_count = ?,
+                    run_success_count = ?,
+                    run_failed_count = ?,
+                    run_success_rate = ?,
+                    run_is_partial = ?,
+                    run_failure_breakdown_json = ?,
                     run_failure_code = NULL,
                     run_failure_message = NULL,
                     run_failed_persona_id = NULL
@@ -373,6 +415,12 @@ class SimulationStore:
                     mean_approval,
                     run_retry_count,
                     run_invalid_output_count,
+                    run_attempted_count,
+                    run_success_count,
+                    run_failed_count,
+                    run_success_rate,
+                    1 if run_is_partial else 0,
+                    run_failure_breakdown_json,
                     simulation_id,
                 ),
             )
@@ -388,6 +436,12 @@ class SimulationStore:
         run_failure_code: str,
         run_failure_message: str,
         run_failed_persona_id: str | None,
+        run_attempted_count: int,
+        run_success_count: int,
+        run_failed_count: int,
+        run_success_rate: float,
+        run_is_partial: bool,
+        run_failure_breakdown_json: str,
     ) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
@@ -398,6 +452,12 @@ class SimulationStore:
                     completed_at = ?,
                     run_retry_count = ?,
                     run_invalid_output_count = ?,
+                    run_attempted_count = ?,
+                    run_success_count = ?,
+                    run_failed_count = ?,
+                    run_success_rate = ?,
+                    run_is_partial = ?,
+                    run_failure_breakdown_json = ?,
                     run_failure_code = ?,
                     run_failure_message = ?,
                     run_failed_persona_id = ?
@@ -407,6 +467,12 @@ class SimulationStore:
                     completed_at,
                     run_retry_count,
                     run_invalid_output_count,
+                    run_attempted_count,
+                    run_success_count,
+                    run_failed_count,
+                    run_success_rate,
+                    1 if run_is_partial else 0,
+                    run_failure_breakdown_json,
                     run_failure_code,
                     run_failure_message,
                     run_failed_persona_id,
