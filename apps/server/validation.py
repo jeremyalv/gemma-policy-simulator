@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import Any, Mapping, cast
 
 from packages.contracts.python.contracts_v1 import (
+    ChallengeFollowupRequest,
     ClarificationAnswerRequest,
     CreateSimulationRequest,
     FilterSet,
+    GenerateChallengeRequest,
     GenerateClarificationRequest,
     RunSimulationRequest,
 )
@@ -140,6 +142,38 @@ def validate_answer_clarification_payload(payload: Any) -> ClarificationAnswerRe
 
     return cast(
         ClarificationAnswerRequest,
+        {
+            "simulation_id": simulation_id.strip(),
+            "user_response": user_response.strip(),
+        },
+    )
+
+
+def validate_generate_challenge_payload(payload: Any) -> GenerateChallengeRequest:
+    if not isinstance(payload, dict):
+        raise ApiError("VALIDATION_ERROR", "request body must be a JSON object")
+
+    focus = payload.get("focus")
+    if not isinstance(focus, str) or not focus.strip():
+        raise ApiError("VALIDATION_ERROR", "focus is required and must be a non-empty string")
+
+    return cast(GenerateChallengeRequest, {"focus": focus.strip()})
+
+
+def validate_challenge_followup_payload(payload: Any) -> ChallengeFollowupRequest:
+    if not isinstance(payload, dict):
+        raise ApiError("VALIDATION_ERROR", "request body must be a JSON object")
+
+    simulation_id = payload.get("simulation_id")
+    user_response = payload.get("user_response")
+
+    if not isinstance(simulation_id, str) or not simulation_id.strip():
+        raise ApiError("VALIDATION_ERROR", "simulation_id is required and must be a non-empty string")
+    if not isinstance(user_response, str) or not user_response.strip():
+        raise ApiError("VALIDATION_ERROR", "user_response is required and must be a non-empty string")
+
+    return cast(
+        ChallengeFollowupRequest,
         {
             "simulation_id": simulation_id.strip(),
             "user_response": user_response.strip(),

@@ -57,8 +57,16 @@ def _ollama_base_url() -> str:
     return os.getenv("SIMS_OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL).rstrip("/")
 
 
+def _env_first(*keys: str) -> str | None:
+    for key in keys:
+        value = os.getenv(key)
+        if value is not None and value.strip():
+            return value.strip()
+    return None
+
+
 def _run_model() -> str:
-    return os.getenv("SIMS_RUN_MODEL", DEFAULT_MODEL)
+    return _env_first("SIMS_RUN_MODEL", "SIMS_OLLAMA_MODEL") or DEFAULT_MODEL
 
 
 def resolve_run_model() -> str:
@@ -66,7 +74,7 @@ def resolve_run_model() -> str:
 
 
 def _timeout_seconds() -> int:
-    raw = os.getenv("SIMS_RUN_TIMEOUT_SECONDS")
+    raw = _env_first("SIMS_RUN_TIMEOUT_SECONDS", "SIMS_OLLAMA_TIMEOUT_SECONDS")
     if raw is None:
         return DEFAULT_TIMEOUT_SECONDS
     try:
@@ -77,7 +85,7 @@ def _timeout_seconds() -> int:
 
 
 def resolve_batch_size() -> int:
-    raw = os.getenv("SIMS_RUN_BATCH_SIZE")
+    raw = _env_first("SIMS_RUN_BATCH_SIZE", "SIMS_BATCH_SIZE")
     if raw is None:
         return DEFAULT_BATCH_SIZE
     try:
@@ -192,12 +200,40 @@ def _call_ollama(prompt: str) -> dict[str, Any]:
     try:
         with request.urlopen(req, timeout=_timeout_seconds()) as resp:
             response_body = resp.read()
+    except error.HTTPError as exc:
+        details = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+            if body:
+                details = f": HTTP {exc.code} {body[:240]}"
+            else:
+                details = f": HTTP {exc.code}"
+        except Exception:
+            details = f": HTTP {exc.code}"
+        raise SimulationRunError(
+            f"model runtime returned error{details}",
+            code="RUNTIME_ERROR",
+            retryable=True,
+        ) from exc
     except error.URLError as exc:
-        raise SimulationRunError("failed to reach model runtime", code="RUNTIME_ERROR", retryable=True) from exc
+        reason = getattr(exc, "reason", None)
+        if reason:
+            suffix = f": {reason}"
+        else:
+            suffix = f": {exc.__class__.__name__}: {exc}"
+        raise SimulationRunError(f"failed to reach model runtime{suffix}", code="RUNTIME_ERROR", retryable=True) from exc
     except TimeoutError as exc:
-        raise SimulationRunError("model runtime timed out", code="RUNTIME_ERROR", retryable=True) from exc
+        raise SimulationRunError(
+            f"model runtime timed out: {exc.__class__.__name__}: {exc}",
+            code="RUNTIME_ERROR",
+            retryable=True,
+        ) from exc
     except Exception as exc:
-        raise SimulationRunError("unexpected model runtime error", code="RUNTIME_ERROR", retryable=True) from exc
+        raise SimulationRunError(
+            f"unexpected model runtime error: {exc.__class__.__name__}: {exc}",
+            code="RUNTIME_ERROR",
+            retryable=True,
+        ) from exc
 
     try:
         payload = json.loads(response_body)

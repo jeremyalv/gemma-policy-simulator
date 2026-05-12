@@ -57,6 +57,16 @@ class SimulationStore:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS challenges (
+                    challenge_id TEXT PRIMARY KEY,
+                    simulation_id TEXT NOT NULL,
+                    focus TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
             existing_columns = {
                 row["name"]
                 for row in conn.execute("PRAGMA table_info(simulations)").fetchall()
@@ -404,3 +414,45 @@ class SimulationStore:
                 ),
             )
             return int(cursor.rowcount)
+
+    def insert_challenge(
+        self,
+        *,
+        challenge_id: str,
+        simulation_id: str,
+        focus: str,
+        created_at: str,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO challenges (
+                    challenge_id,
+                    simulation_id,
+                    focus,
+                    created_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (challenge_id, simulation_id, focus, created_at),
+            )
+
+    def fetch_challenge(self, challenge_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT challenge_id, simulation_id, focus, created_at
+                FROM challenges
+                WHERE challenge_id = ?
+                """,
+                (challenge_id,),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return {
+            "challenge_id": row["challenge_id"],
+            "simulation_id": row["simulation_id"],
+            "focus": row["focus"],
+            "created_at": row["created_at"],
+        }

@@ -13,22 +13,27 @@ from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
 from .errors import ApiError
 from .service import (
+    generate_challenge,
     answer_clarification_question,
     create_simulation_draft,
     delete_simulation,
     export_simulation_csv,
     generate_clarification_question,
     get_clarification_state,
+    list_datasets,
     get_simulation_results,
     get_simulation_status,
     list_simulation_history,
     new_request_id,
     run_simulation,
+    submit_challenge_followup,
 )
 from .storage import SimulationStore
 from .validation import (
+    validate_challenge_followup_payload,
     validate_answer_clarification_payload,
     validate_create_simulation_payload,
+    validate_generate_challenge_payload,
     validate_generate_clarification_payload,
     validate_list_simulations_query,
     validate_run_simulation_payload,
@@ -102,6 +107,14 @@ def create_app(db_path: Path | None = None) -> FastAPI:
 
         return JSONResponse(status_code=200, content=response)
 
+    @app.get("/api/v1/datasets", status_code=200)
+    async def get_datasets() -> Any:
+        try:
+            response = list_datasets()
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+        return JSONResponse(status_code=200, content=response)
+
     @app.delete("/api/v1/simulations/{simulation_id}", status_code=200)
     async def delete_simulation_by_id(simulation_id: str) -> Any:
         try:
@@ -162,6 +175,44 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     async def get_simulation_status_by_id(simulation_id: str) -> Any:
         try:
             response = get_simulation_status(store, simulation_id)
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
+
+    @app.post("/api/v1/simulations/{simulation_id}/challenge", status_code=200)
+    async def post_generate_challenge(simulation_id: str, request: Request) -> Any:
+        try:
+            payload = await request.json()
+        except Exception:
+            return error_envelope(400, "VALIDATION_ERROR", "request body must be valid JSON")
+
+        try:
+            validated = validate_generate_challenge_payload(payload)
+            response = generate_challenge(
+                store=store,
+                simulation_id=simulation_id,
+                request_body=validated,
+            )
+        except ApiError as exc:
+            return error_envelope(exc.status_code, exc.code, exc.message)
+
+        return JSONResponse(status_code=200, content=response)
+
+    @app.post("/api/v1/challenges/{challenge_id}/followup", status_code=200)
+    async def post_challenge_followup(challenge_id: str, request: Request) -> Any:
+        try:
+            payload = await request.json()
+        except Exception:
+            return error_envelope(400, "VALIDATION_ERROR", "request body must be valid JSON")
+
+        try:
+            validated = validate_challenge_followup_payload(payload)
+            response = submit_challenge_followup(
+                store=store,
+                challenge_id=challenge_id,
+                request_body=validated,
+            )
         except ApiError as exc:
             return error_envelope(exc.status_code, exc.code, exc.message)
 

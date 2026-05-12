@@ -15,13 +15,18 @@ from typing import Any, cast
 from uuid import uuid4
 
 from packages.contracts.python.contracts_v1 import (
+    ChallengeEnvelope,
+    ChallengeFollowupEnvelope,
+    ChallengeFollowupRequest,
     ClarificationAnswerEnvelope,
     ClarificationAnswerRequest,
     ClarificationQuestionEnvelope,
     ClarificationStateEnvelope,
     CreateSimulationEnvelope,
     CreateSimulationRequest,
+    DatasetsEnvelope,
     DeleteSimulationEnvelope,
+    GenerateChallengeRequest,
     GenerateClarificationRequest,
     RunAcceptedEnvelope,
     RunSimulationRequest,
@@ -64,6 +69,9 @@ def new_request_id() -> str:
 
 def new_clarification_id() -> str:
     return f"cl_{uuid4().hex[:8]}"
+
+def new_challenge_id() -> str:
+    return f"ch_{uuid4().hex[:8]}"
 
 
 def utc_now_iso() -> str:
@@ -252,6 +260,41 @@ def create_simulation_draft(store: SimulationStore, request_body: CreateSimulati
         CreateSimulationEnvelope,
         {
             "data": data,
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def list_datasets() -> DatasetsEnvelope:
+    return cast(
+        DatasetsEnvelope,
+        {
+            "data": [
+                {
+                    "id": "nemotron_usa",
+                    "name": "NVIDIA Nemotron Personas USA",
+                    "description": "Synthetic personas, census-aligned across US states",
+                    "size": 1000000,
+                    "attributes": [
+                        "age",
+                        "sex",
+                        "marital_status",
+                        "education_level",
+                        "occupation",
+                        "state",
+                        "city",
+                    ],
+                    "license": "CC BY 4.0",
+                    "status": "active",
+                },
+                {
+                    "id": "sims_indo_v1",
+                    "name": "SIMS Indonesia V1",
+                    "description": "Handmade synthetic dataset for Indonesia",
+                    "status": "coming_v2",
+                },
+            ],
             "error": None,
             "meta": {"request_id": new_request_id()},
         },
@@ -867,6 +910,192 @@ def get_simulation_results(store: SimulationStore, simulation_id: str) -> Simula
         SimulationResultsEnvelope,
         {
             "data": data,
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def _completed_simulation_results_data(store: SimulationStore, simulation_id: str) -> dict[str, Any]:
+    envelope = get_simulation_results(store, simulation_id)
+    return cast(dict[str, Any], envelope["data"])
+
+
+def _round_to_1(value: float) -> float:
+    return round(float(value), 1)
+
+
+def _build_challenge_for_focus(focus: str, results_data: dict[str, Any]) -> dict[str, Any]:
+    summary = cast(dict[str, Any], results_data.get("summary", {}))
+    breakdown = cast(dict[str, Any], results_data.get("demographic_breakdown", {}))
+    by_age_group = cast(dict[str, dict[str, Any]], breakdown.get("by_age_group", {}))
+    by_state = cast(dict[str, float], breakdown.get("by_state", {}))
+    emotion_profile = cast(dict[str, float], results_data.get("emotion_profile", {}))
+
+    if focus == "weak_segment":
+        weakest = min(
+            by_age_group.items(),
+            key=lambda item: (float(item[1].get("mean_approval", 0.0)), item[0]),
+        ) if by_age_group else ("all", {"mean_approval": float(summary.get("mean_approval", 0.0))})
+        segment = weakest[0]
+        mean_approval = _round_to_1(float(weakest[1].get("mean_approval", 0.0)))
+        challenge_text = (
+            f"Approval is weakest for segment {segment} at {mean_approval}/5. "
+            "What concrete policy change directly improves this segment's concerns?"
+        )
+        top_concern = "Low approval concentration in weakest segment"
+    elif focus == "behavioral_change":
+        behavioral_change_pct = _round_to_1(float(summary.get("behavioral_change_pct", 0.0)))
+        mean_approval = _round_to_1(float(summary.get("mean_approval", 0.0)))
+        segment = "Behavior-change cohort"
+        challenge_text = (
+            f"Behavioral change is {behavioral_change_pct}% with mean approval {mean_approval}/5. "
+            "Why should skeptical groups trust this behavior-change assumption?"
+        )
+        top_concern = "Behavior-change expectation may be overestimated"
+    elif focus == "emotion_bias":
+        dominant = str(summary.get("dominant_emotion", "neutral"))
+        dom_pct = _round_to_1(float(emotion_profile.get(dominant, 0.0)))
+        mean_approval = _round_to_1(float(summary.get("mean_approval", 0.0)))
+        segment = "All demographics"
+        challenge_text = (
+            f"Dominant emotion is {dominant} ({dom_pct}%). "
+            "How will you reframe policy communication to reduce negative emotional bias?"
+        )
+        top_concern = "Emotional framing may reduce trust"
+    else:
+        if by_state:
+            low_state, low_mean = min(by_state.items(), key=lambda item: (float(item[1]), item[0]))
+            high_state, high_mean = max(by_state.items(), key=lambda item: (float(item[1]), item[0]))
+            gap = _round_to_1(float(high_mean) - float(low_mean))
+            segment = f"{low_state} vs {high_state}"
+            mean_approval = _round_to_1(float(low_mean))
+            challenge_text = (
+                f"There is a {gap}-point approval gap between states ({low_state} lowest, {high_state} highest). "
+                "How does the policy address this demographic disparity?"
+            )
+        else:
+            segment = "State segments"
+            mean_approval = _round_to_1(float(summary.get("mean_approval", 0.0)))
+            challenge_text = "State-level approval disparity appears in results. How will policy design close that gap?"
+        top_concern = "Uneven demographic impact across groups"
+
+    return {
+        "challenge_text": challenge_text,
+        "evidence": {
+            "segment": segment,
+            "mean_approval": mean_approval,
+            "top_concern": top_concern,
+        },
+    }
+
+
+def generate_challenge(
+    store: SimulationStore,
+    simulation_id: str,
+    request_body: GenerateChallengeRequest,
+) -> ChallengeEnvelope:
+    simulation = store.fetch_simulation(simulation_id)
+    if simulation is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"simulation not found: {simulation_id}",
+            status_code=404,
+        )
+    if cast(str, simulation["status"]) != "completed":
+        raise ApiError(
+            code="LIFECYCLE_CONFLICT",
+            message="challenge generation is only allowed for completed simulations",
+            status_code=409,
+        )
+
+    focus = request_body["focus"]
+    results_data = _completed_simulation_results_data(store, simulation_id)
+    challenge_id = new_challenge_id()
+    built = _build_challenge_for_focus(focus, results_data)
+
+    store.insert_challenge(
+        challenge_id=challenge_id,
+        simulation_id=simulation_id,
+        focus=focus,
+        created_at=utc_now_iso(),
+    )
+
+    return cast(
+        ChallengeEnvelope,
+        {
+            "data": {
+                "challenge_id": challenge_id,
+                "challenge_text": built["challenge_text"],
+                "evidence": built["evidence"],
+            },
+            "error": None,
+            "meta": {"request_id": new_request_id()},
+        },
+    )
+
+
+def submit_challenge_followup(
+    store: SimulationStore,
+    challenge_id: str,
+    request_body: ChallengeFollowupRequest,
+) -> ChallengeFollowupEnvelope:
+    challenge = store.fetch_challenge(challenge_id)
+    if challenge is None:
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"challenge not found: {challenge_id}",
+            status_code=404,
+        )
+
+    simulation_id = cast(str, request_body["simulation_id"])
+    if simulation_id != challenge["simulation_id"]:
+        raise ApiError(
+            code="VALIDATION_ERROR",
+            message="simulation_id does not match challenge context",
+            status_code=400,
+        )
+
+    user_response = cast(str, request_body["user_response"]).lower()
+    is_detailed = len(user_response) > 80
+    mentions_data = any(token in user_response for token in ["data", "evidence", "study"])
+    mentions_cost = any(token in user_response for token in ["cost", "rebate", "subsid"])
+
+    if mentions_data:
+        followup_text = (
+            "That evidence-based framing helps. How will you validate those assumptions for the lowest-approval segment specifically?"
+        )
+    elif mentions_cost:
+        followup_text = (
+            "Cost mitigation is directionally strong. What is the timeline for relief, and how will households bridge the interim period?"
+        )
+    elif is_detailed:
+        followup_text = (
+            "The response is substantive. Which single policy lever should be prioritized first to maximize approval lift?"
+        )
+    else:
+        followup_text = (
+            "That addresses part of the concern. Please specify concrete implementation steps for the most skeptical segment."
+        )
+
+    next_challenge_id = new_challenge_id()
+    store.insert_challenge(
+        challenge_id=next_challenge_id,
+        simulation_id=simulation_id,
+        focus=cast(str, challenge["focus"]),
+        created_at=utc_now_iso(),
+    )
+
+    return cast(
+        ChallengeFollowupEnvelope,
+        {
+            "data": {
+                "followup_text": followup_text,
+                "suggested_policy_refinement": (
+                    "Add a targeted mitigation for the weakest segment with explicit eligibility, timeline, and communication plan."
+                ),
+                "next_challenge_id": next_challenge_id,
+            },
             "error": None,
             "meta": {"request_id": new_request_id()},
         },

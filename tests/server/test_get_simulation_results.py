@@ -287,6 +287,50 @@ def test_get_simulation_results_quotes_are_deterministic(tmp_path: Path) -> None
     assert [q["persona_id"] for q in first.json()["data"]["representative_quotes"]] == ["p_a", "p_b"]
 
 
+def test_get_simulation_results_normalizes_emotion_casing(tmp_path: Path) -> None:
+    db_path = tmp_path / "sims.db"
+    store = SimulationStore(db_path)
+    store.ensure_schema()
+    _insert_row(db_path, simulation_id="sim_results_emotion_case", status="completed", sample_size=3, effective_sample_size=3)
+
+    _write_artifact(
+        "sim_results_emotion_case",
+        {
+            "simulation_id": "sim_results_emotion_case",
+            "model": "gemma",
+            "output_count": 3,
+            "raw_outputs": [
+                {
+                    "persona": {"persona_id": "p_1", "name": "A", "age": 30, "marital_status": "married", "occupation": "Teacher", "city": "Austin", "state": "TX"},
+                    "response": {"approval": 3, "emotion": "Neutral", "rationale": "r1"},
+                },
+                {
+                    "persona": {"persona_id": "p_2", "name": "B", "age": 45, "marital_status": "married", "occupation": "Nurse", "city": "LA", "state": "CA"},
+                    "response": {"approval": 3, "emotion": "neutral", "rationale": "r2"},
+                },
+                {
+                    "persona": {"persona_id": "p_3", "name": "C", "age": 55, "marital_status": "married", "occupation": "Engineer", "city": "Miami", "state": "FL"},
+                    "response": {"approval": 3, "emotion": "NEUTRAL", "rationale": "r3"},
+                },
+            ],
+            "run_telemetry": {
+                "retry_count": 0,
+                "invalid_output_count": 0,
+                "failure_code": None,
+                "failure_message": None,
+                "failed_persona_id": None,
+            },
+        },
+    )
+
+    client = TestClient(create_app(db_path))
+    response = client.get("/api/v1/simulations/sim_results_emotion_case/results")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["summary"]["dominant_emotion"] == "neutral"
+    assert data["emotion_profile"] == {"neutral": 100.0}
+
+
 @pytest.mark.parametrize("status", ["pending", "running"])
 def test_get_simulation_results_pending_or_running_conflict(tmp_path: Path, status: str) -> None:
     db_path = tmp_path / "sims.db"

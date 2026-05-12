@@ -50,6 +50,10 @@ def _dominant_emotion(emotion_counts: Counter[str]) -> str:
     return sorted(emotion_counts.items(), key=lambda item: (-item[1], item[0]))[0][0]
 
 
+def _normalize_emotion_label(value: str) -> str:
+    return value.strip().lower()
+
+
 def _select_representative_quotes(
     raw_outputs: list[dict[str, Any]],
     *,
@@ -142,7 +146,7 @@ def aggregate_results_payload(
             continue
 
         approvals.append(approval)
-        normalized_emotion = emotion.strip()
+        normalized_emotion = _normalize_emotion_label(emotion)
         emotion_counts[normalized_emotion] += 1
 
         behavior_change = response.get("behavior_change")

@@ -9,3 +9,5 @@ Use progressive context in this order:
 5. `architecture/data-contracts.md` for persona and simulation schema rules.
 6. `adrs/` for immutable architecture decisions.
 7. `runbooks/development-workflow.md` for execution conventions.
+8. `frontend/MVP_FE_AUDIT_2026-05-12.md` for current FE MVP readiness findings.
+9. `runbooks/MVP_BE_INTEGRATION_CLOSURE_PLAN.md` for BE closure gates and verification.
