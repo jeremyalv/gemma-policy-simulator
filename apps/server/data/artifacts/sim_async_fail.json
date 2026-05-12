@@ -1,1 +1,0 @@
-{"simulation_id": "sim_async_fail", "model": "gemma", "output_count": 0, "raw_outputs": [], "run_telemetry": {"retry_count": 1, "invalid_output_count": 0, "failure_code": "RUNTIME_ERROR", "failure_message": "unexpected model runtime error", "failed_persona_id": "p_sim_async_fail_00001"}}

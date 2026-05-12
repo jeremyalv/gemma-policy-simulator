@@ -26,3 +26,6 @@ db/archived_migrations/*
 
 # Local server runtime database
 apps/server/data/sims.db
+
+# Local server runtime artifacts
+apps/server/data/artifacts/*.json
