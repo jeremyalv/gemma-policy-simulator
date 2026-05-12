@@ -13,6 +13,7 @@ from typing import Any
 
 DEFAULT_DATASET_PATH = "data/nemotron_usa"
 DEFAULT_DATASET_VERSION = "unknown"
+MAX_SQLITE_INT64 = (1 << 63) - 1
 
 
 class DatasetLoadError(Exception):
@@ -31,7 +32,8 @@ def resolve_dataset_version() -> str:
 
 def sampling_seed_for_simulation(simulation_id: str) -> int:
     digest = hashlib.sha256(simulation_id.encode("utf-8")).hexdigest()
-    return int(digest[:16], 16)
+    # Keep seed deterministic while staying within SQLite signed INTEGER bounds.
+    return int(digest[:16], 16) % MAX_SQLITE_INT64
 
 
 def _normalize_marital_status(value: str) -> str:

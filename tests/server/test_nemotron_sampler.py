@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.persona_engine.nemotron_usa import sample_personas
+from src.persona_engine.nemotron_usa import MAX_SQLITE_INT64, sample_personas, sampling_seed_for_simulation
 
 
 def _write_dataset(path: Path) -> None:
@@ -56,3 +56,8 @@ def test_sample_personas_applies_filters(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert sample_rows[0]["state"] == "FL"
     assert sample_rows[0]["occupation"] == "Nurse"
     assert meta["available_count"] == 1
+
+
+def test_sampling_seed_fits_sqlite_signed_int() -> None:
+    seed = sampling_seed_for_simulation("sim_9845da2a")
+    assert 0 <= seed <= MAX_SQLITE_INT64
