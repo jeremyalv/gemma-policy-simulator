@@ -29,3 +29,6 @@ apps/server/data/sims.db
 
 # Local server runtime artifacts
 apps/server/data/artifacts/*.json
+
+# Local Nemotron dataset files
+data/nemotron_usa/
