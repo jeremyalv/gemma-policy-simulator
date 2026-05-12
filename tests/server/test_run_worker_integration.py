@@ -22,6 +22,34 @@ def _client_with_db(tmp_path: Path) -> tuple[TestClient, Path]:
     return TestClient(app), db_path
 
 
+@pytest.fixture(autouse=True)
+def _mock_dataset_sampler(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _sample_personas(*, simulation_id: str, count: int, filters: dict[str, object] | None) -> tuple[list[dict[str, object]], dict[str, object]]:
+        _ = filters
+        personas = [
+            {
+                "persona_id": f"p_{simulation_id}_{idx+1:05d}",
+                "name": f"Persona {idx + 1}",
+                "age": 30,
+                "sex": "female",
+                "marital_status": "married",
+                "education_level": "bachelors",
+                "occupation": "Teacher",
+                "city": "Austin",
+                "state": "TX",
+            }
+            for idx in range(count)
+        ]
+        return personas, {
+            "dataset_version": "test-v1",
+            "dataset_source": "/tmp/test.csv",
+            "sampling_seed": 123,
+            "available_count": count,
+        }
+
+    monkeypatch.setattr(service_module, "sample_personas", _sample_personas)
+
+
 def _insert_row(
     db_path: Path,
     *,
@@ -109,6 +137,8 @@ def test_run_worker_eventually_completes_and_writes_artifact(
     assert artifact.exists()
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     assert payload["simulation_id"] == "sim_async_ok"
+    assert payload["dataset_version"] == "test-v1"
+    assert payload["sampling_seed"] == 123
     assert payload["output_count"] == 12
     assert len(payload["raw_outputs"]) == 12
     assert payload["run_telemetry"] == {

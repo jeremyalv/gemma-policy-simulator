@@ -27,6 +27,20 @@
 - Check segmentation outputs for missing-value buckets.
 - Confirm run metadata includes model/dataset/prompt versions.
 
+## Nemotron USA Local Dataset Setup
+1. Create a Hugging Face account at [https://huggingface.co/join](https://huggingface.co/join).
+2. Install CLI tooling:
+   - `pip install -U "huggingface_hub[cli]"`
+3. Create an access token at [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens), then login:
+   - `huggingface-cli login`
+4. Download dataset files locally:
+   - `huggingface-cli download nvidia/Nemotron-Personas-USA --repo-type dataset --local-dir data/nemotron_usa --local-dir-use-symlinks False`
+5. Configure backend environment:
+   - `SIMS_DATASET_NEMOTRON_PATH=data/nemotron_usa`
+   - `SIMS_DATASET_NEMOTRON_VERSION=1.1`
+6. If local files are Parquet-only, install runtime reader dependencies:
+   - `pip install datasets pyarrow`
+
 ## Performance Verification (Laptop Targets)
 - Run at least one benchmark on M1 Pro using `interactive` and `balanced` profiles.
 - Validate degraded mode on a lower-spec profile (reduced sample size and batch size).

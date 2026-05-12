@@ -9,12 +9,41 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from apps.server.app import create_app
+from apps.server import service as service_module
 
 
 def _client_with_db(tmp_path: Path) -> tuple[TestClient, Path]:
     db_path = tmp_path / "sims.db"
     app = create_app(db_path=db_path)
     return TestClient(app), db_path
+
+
+@pytest.fixture(autouse=True)
+def _mock_dataset_sampler(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _sample_personas(*, simulation_id: str, count: int, filters: dict[str, object] | None) -> tuple[list[dict[str, object]], dict[str, object]]:
+        _ = (simulation_id, filters)
+        personas = [
+            {
+                "persona_id": f"p_{idx + 1:05d}",
+                "name": f"Persona {idx + 1}",
+                "age": 30,
+                "sex": "female",
+                "marital_status": "married",
+                "education_level": "bachelors",
+                "occupation": "Teacher",
+                "city": "Austin",
+                "state": "TX",
+            }
+            for idx in range(count)
+        ]
+        return personas, {
+            "dataset_version": "test-v1",
+            "dataset_source": "/tmp/test.csv",
+            "sampling_seed": 123,
+            "available_count": count,
+        }
+
+    monkeypatch.setattr(service_module, "sample_personas", _sample_personas)
 
 
 def _insert_row(
@@ -258,3 +287,27 @@ def test_run_simulation_non_blocking_with_clarification_in_progress(tmp_path: Pa
 
     assert row is not None
     assert row[0] == "refined_policy_text"
+
+
+def test_run_simulation_insufficient_dataset_sample_returns_409(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, db_path = _client_with_db(tmp_path)
+    _insert_row(db_path, simulation_id="sim_001", sample_size=120)
+
+    def _raise_insufficient(*, simulation_id: str, count: int, filters: dict[str, object] | None) -> tuple[list[dict[str, object]], dict[str, object]]:
+        _ = (simulation_id, count, filters)
+        raise service_module.DatasetLoadError("insufficient personas after filters: required=120, available=30")
+
+    monkeypatch.setattr(service_module, "sample_personas", _raise_insufficient)
+
+    response = client.post("/api/v1/simulations/sim_001/run")
+    assert response.status_code == 409
+    body = response.json()
+    assert body["error"]["code"] == "INSUFFICIENT_DATASET_SAMPLE"
+
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute("SELECT status FROM simulations WHERE id = ?", ("sim_001",)).fetchone()
+    assert row is not None
+    assert row[0] == "pending"

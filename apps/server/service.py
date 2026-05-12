@@ -42,13 +42,13 @@ from .results_aggregator import aggregate_results_payload
 from .simulation_runner import (
     SimulationRunError,
     build_policy_prompt,
-    generate_personas,
     generate_policy_response_with_ollama,
     resolve_batch_size,
     resolve_max_retries,
     resolve_run_model,
 )
 from .storage import SimulationStore
+from src.persona_engine.nemotron_usa import DatasetLoadError, sample_personas
 
 MAX_CLARIFICATION_TURNS = 3
 ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
@@ -580,6 +580,20 @@ def run_simulation(
     estimated_seconds = _estimate_seconds(effective_sample_size, runtime_profile)
     started_at = utc_now_iso()
 
+    filters = simulation.get("filters")
+    try:
+        _, dataset_metadata = sample_personas(
+            simulation_id=simulation_id,
+            count=effective_sample_size,
+            filters=filters if isinstance(filters, dict) else None,
+        )
+    except DatasetLoadError as exc:
+        raise ApiError(
+            code="INSUFFICIENT_DATASET_SAMPLE",
+            message=str(exc),
+            status_code=409,
+        ) from exc
+
     use_refined_prompt = cast(bool, request_body.get("use_refined_prompt", True))
     has_refined = isinstance(simulation.get("refined_policy_text"), str) and bool(cast(str, simulation["refined_policy_text"]).strip())
     run_prompt_source = "refined_policy_text" if use_refined_prompt and has_refined else "policy_text"
@@ -593,6 +607,8 @@ def run_simulation(
         run_idempotency_key=idempotency_key,
         run_request_fingerprint=fingerprint,
         run_prompt_source=run_prompt_source,
+        run_dataset_version=cast(str, dataset_metadata["dataset_version"]),
+        run_sampling_seed=int(cast(int, dataset_metadata["sampling_seed"])),
     )
     if updated_rows == 0:
         raise ApiError(
@@ -643,8 +659,7 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
         policy_text = cast(str, simulation.get(cast(str, simulation.get("run_prompt_source", "policy_text"))) or simulation["policy_text"])
         effective_sample_size = int(simulation.get("effective_sample_size") or simulation["sample_size"])
         filters = simulation.get("filters")
-
-        personas = generate_personas(
+        personas, dataset_metadata = sample_personas(
             simulation_id=simulation_id,
             count=effective_sample_size,
             filters=filters if isinstance(filters, dict) else None,
@@ -685,6 +700,8 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
         artifact = {
             "simulation_id": simulation_id,
             "model": resolve_run_model(),
+            "dataset_version": simulation.get("run_dataset_version") or dataset_metadata["dataset_version"],
+            "sampling_seed": simulation.get("run_sampling_seed") or dataset_metadata["sampling_seed"],
             "output_count": len(outputs),
             "raw_outputs": outputs,
             "run_telemetry": telemetry,
@@ -708,6 +725,8 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
         artifact = {
             "simulation_id": simulation_id,
             "model": resolve_run_model(),
+            "dataset_version": simulation.get("run_dataset_version") if "simulation" in locals() and isinstance(simulation, dict) else None,
+            "sampling_seed": simulation.get("run_sampling_seed") if "simulation" in locals() and isinstance(simulation, dict) else None,
             "output_count": len(outputs),
             "raw_outputs": outputs,
             "run_telemetry": telemetry,

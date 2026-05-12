@@ -49,6 +49,8 @@ class SimulationStore:
                     run_failure_code TEXT,
                     run_failure_message TEXT,
                     run_failed_persona_id TEXT,
+                    run_dataset_version TEXT,
+                    run_sampling_seed INTEGER,
                     clarification_status TEXT NOT NULL DEFAULT 'none',
                     clarification_turn_index INTEGER NOT NULL DEFAULT 0,
                     current_clarification_id TEXT
@@ -87,6 +89,10 @@ class SimulationStore:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_failure_message TEXT")
             if "run_failed_persona_id" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN run_failed_persona_id TEXT")
+            if "run_dataset_version" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_dataset_version TEXT")
+            if "run_sampling_seed" not in existing_columns:
+                conn.execute("ALTER TABLE simulations ADD COLUMN run_sampling_seed INTEGER")
             if "clarification_status" not in existing_columns:
                 conn.execute("ALTER TABLE simulations ADD COLUMN clarification_status TEXT NOT NULL DEFAULT 'none'")
             if "clarification_turn_index" not in existing_columns:
@@ -163,6 +169,8 @@ class SimulationStore:
             "run_failure_code": row["run_failure_code"],
             "run_failure_message": row["run_failure_message"],
             "run_failed_persona_id": row["run_failed_persona_id"],
+            "run_dataset_version": row["run_dataset_version"],
+            "run_sampling_seed": row["run_sampling_seed"],
             "clarification_status": row["clarification_status"],
             "clarification_turn_index": row["clarification_turn_index"],
             "current_clarification_id": row["current_clarification_id"],
@@ -286,6 +294,8 @@ class SimulationStore:
         run_idempotency_key: str | None,
         run_request_fingerprint: str,
         run_prompt_source: str,
+        run_dataset_version: str,
+        run_sampling_seed: int,
     ) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
@@ -300,6 +310,8 @@ class SimulationStore:
                     run_idempotency_key = ?,
                     run_request_fingerprint = ?,
                     run_prompt_source = ?,
+                    run_dataset_version = ?,
+                    run_sampling_seed = ?,
                     run_retry_count = 0,
                     run_invalid_output_count = 0,
                     run_failure_code = NULL,
@@ -315,6 +327,8 @@ class SimulationStore:
                     run_idempotency_key,
                     run_request_fingerprint,
                     run_prompt_source,
+                    run_dataset_version,
+                    run_sampling_seed,
                     simulation_id,
                 ),
             )
