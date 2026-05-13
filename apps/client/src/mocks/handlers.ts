@@ -1,7 +1,7 @@
 /**
  * MSW (Mock Service Worker) handlers
  * Mirrors the V1 API contract exactly.
- * Enable via VITE_USE_MOCKS=true or automatically in dev mode.
+ * Enable only via explicit VITE_USE_MOCKS=true.
  */
 
 import { http, HttpResponse } from 'msw'

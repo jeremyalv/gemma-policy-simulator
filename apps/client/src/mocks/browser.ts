@@ -2,9 +2,8 @@
  * MSW browser worker setup
  * Import and call `startMockWorker()` in main.tsx when mocks are enabled.
  *
- * Mocks are active when:
- *   - VITE_USE_MOCKS=true  (explicit opt-in)
- *   - or VITE_USE_MOCKS is unset and mode === 'development'
+ * Mocks are active only when:
+ *   - VITE_USE_MOCKS=true (explicit opt-in)
  */
 
 import { setupWorker } from 'msw/browser'

@@ -11,3 +11,4 @@ Use progressive context in this order:
 7. `runbooks/development-workflow.md` for execution conventions.
 8. `frontend/MVP_FE_AUDIT_2026-05-12.md` for current FE MVP readiness findings.
 9. `runbooks/MVP_BE_INTEGRATION_CLOSURE_PLAN.md` for BE closure gates and verification.
+10. `frontend/FE_NO_MOCK_SIGNOFF.md` for no-mock FE sign-off verification steps.

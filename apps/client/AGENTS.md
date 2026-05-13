@@ -10,7 +10,7 @@ React 18 · Vite 6 · TypeScript 5 · Mantine 7 · TanStack Query v5 · Recharts
 - **Contract source:** `packages/contracts/openapi/v1.json` → auto-generated `src/api/types.gen.ts`.
 - **API barrel:** import types from `@/api` (re-exports from `src/api/index.ts`), not from `types.gen.ts` directly.
 - **Theming:** multi-tenant via CSS custom properties + `public/institution-config.json`. Default: `global-default` (teal/gold). Alternatives: `gov-formal`, `think-tank-modern`, `academic-warm`.
-- **Mock mode:** MSW worker at `public/mockServiceWorker.js`. Enabled when `VITE_API_BASE` is unset or the server is unreachable.
+- **Mock mode:** MSW worker at `public/mockServiceWorker.js`. Enabled only when `VITE_USE_MOCKS=true`.
 - **localStorage:** simulation history at `infinipol:simulations`, draft form at `infinipol:create-draft`.
 
 ## Completed Features

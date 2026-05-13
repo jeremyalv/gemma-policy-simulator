@@ -5,9 +5,8 @@
  * suggests policy refinements.
  * Contract ref: packages/contracts/openapi/v1.json — "challenge" tag
  *
- * NOTE: Backend implementation is in progress.
- * Frontend gracefully falls back to mock responses via MSW
- * when endpoint returns 500 or 501.
+ * In MVP sign-off mode (`VITE_USE_MOCKS=false`), these calls must hit
+ * real backend endpoints with no fallback substitution.
  */
 
 import { api } from '@/api/client'

@@ -61,13 +61,6 @@ export default function ChallengePage() {
           </Text>
         </Box>
 
-        {/* Mock fallback banner */}
-        {flow.isMockFallback && (
-          <Alert icon={<AlertCircle size={14} />} color="yellow" variant="light">
-            Backend challenge endpoint is in development; showing mock response.
-          </Alert>
-        )}
-
         {/* Content area */}
         <Box
           style={{

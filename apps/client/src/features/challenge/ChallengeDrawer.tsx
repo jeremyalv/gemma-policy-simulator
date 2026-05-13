@@ -9,7 +9,6 @@
  * and display a differential approval score (original range vs. challenged range).
  *
  * Current flow: FocusPicker → ChallengeDisplay (text generation) → FollowupDisplay
- * Graceful fallback banner when backend returns 500/501.
  */
 
 import { Drawer, Stack, Text, Group, Alert, Loader, Box } from '@mantine/core'
@@ -145,8 +144,8 @@ export function ChallengeDrawer({
         {flow.state === 'error' && (
           <Alert
             icon={<AlertCircle size={16} />}
-            color={flow.isMockFallback ? 'orange' : 'red'}
-            title={flow.isMockFallback ? 'Backend not connected' : 'Challenge failed'}
+            color="red"
+            title="Challenge failed"
           >
             <Stack gap={8}>
               <Text size="sm">
@@ -158,9 +157,7 @@ export function ChallengeDrawer({
                   component="span"
                   style={{
                     cursor: 'pointer',
-                    color: flow.isMockFallback
-                      ? 'var(--color-status-warning)'
-                      : 'var(--color-status-error)',
+                    color: 'var(--color-status-error)',
                     textDecoration: 'underline',
                   }}
                   onClick={flow.retry}

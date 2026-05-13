@@ -12,6 +12,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ThemeProvider } from '@/theme/ThemeProvider'
+import { isMockModeEnabled } from '@/lib/mockMode'
 import App from './App'
 
 // ── Fonts (fontsource — Vite resolves these as proper assets, no /fonts/ path needed)
@@ -52,20 +53,22 @@ const queryClient = new QueryClient({
 
 // ── Mock Service Worker ───────────────────────────────────────────────────────
 //
-// Mocks are ACTIVE by default — in both dev and production builds.
-// This ensures the app works out of the box without a real backend running.
+// Mocks are DISABLED by default.
+// This keeps MVP sign-off paths bound to real backend behavior.
 //
-// To disable mocks and use a real backend, set VITE_USE_MOCKS=false in
-// your .env.production.local or CI/CD environment at build time:
-//   VITE_USE_MOCKS=false VITE_API_BASE_URL=https://api.example.com vite build
+// To enable mocks locally, set VITE_USE_MOCKS=true:
+//   VITE_USE_MOCKS=true vite dev
 //
-const useMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
+const useMocks = isMockModeEnabled(import.meta.env.VITE_USE_MOCKS)
 
 async function prepare(): Promise<void> {
   if (useMocks) {
     const { startMockWorker } = await import('@/mocks/browser')
     await startMockWorker()
+    console.info('[InfiniPol] startup mode: mocks enabled (VITE_USE_MOCKS=true)')
+    return
   }
+  console.info('[InfiniPol] startup mode: real backend (mocks disabled)')
 }
 
 // ── Mount ─────────────────────────────────────────────────────────────────────

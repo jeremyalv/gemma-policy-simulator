@@ -9,15 +9,12 @@
  *   POST /simulations/:id/challenge          → ChallengeData
  *   POST /challenges/:challenge_id/followup  → ChallengeFollowupData
  *
- * Graceful fallback: if backend returns 500/501/NOT_IMPLEMENTED,
- * the error is surfaced via `isMockFallback = true` so UI can show banner.
- * MSW will intercept and return mock data regardless.
  */
 
 import { useState, useCallback } from 'react'
 import { generateChallenge, submitChallengeFollowup } from '@/api'
 import type { ChallengeData, ChallengeFollowupData } from '@/api'
-import { isBackendDownError } from '@/lib/api-errors'
+import { challengeErrorMessage } from './challengeErrors'
 
 export type ChallengeFlowState =
   | 'idle'
@@ -65,7 +62,6 @@ interface UseChallengeFlowReturn {
   challenge:       ChallengeData | null
   followup:        ChallengeFollowupData | null
   error:           string | null
-  isMockFallback:  boolean
   // Actions
   open:            () => void
   close:           () => void
@@ -83,13 +79,11 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
   const [challenge,      setChallenge]     = useState<ChallengeData | null>(null)
   const [followup,       setFollowup]      = useState<ChallengeFollowupData | null>(null)
   const [error,          setError]         = useState<string | null>(null)
-  const [isMockFallback, setMockFallback]  = useState(false)
 
   // ── Open / close ──────────────────────────────────────────────────────────
   const open  = useCallback(() => {
     setState('picking')
     setError(null)
-    setMockFallback(false)
   }, [])
   const close = useCallback(() => { setState('idle') }, [])
 
@@ -103,20 +97,13 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
     if (!selectedFocus) return
     setState('loading_challenge')
     setError(null)
-    setMockFallback(false)
 
     try {
       const data = await generateChallenge(simulationId, selectedFocus)
       setChallenge(data)
       setState('challenging')
     } catch (err) {
-      const isBackendDown = isBackendDownError(err)
-      setMockFallback(isBackendDown)
-      setError(
-        isBackendDown
-          ? 'The challenge endpoint is not responding. Make sure the backend is running.'
-          : (err instanceof Error ? err.message : 'Failed to generate challenge.'),
-      )
+      setError(challengeErrorMessage(err, 'Failed to generate challenge.'))
       setState('error')
     }
   }, [simulationId, selectedFocus])
@@ -136,13 +123,7 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setFollowup(data)
       setState('followup')
     } catch (err) {
-      const isBackendDown = isBackendDownError(err)
-      setMockFallback(isBackendDown)
-      setError(
-        isBackendDown
-          ? 'The challenge endpoint is not responding. Make sure the backend is running.'
-          : (err instanceof Error ? err.message : 'Failed to submit response.'),
-      )
+      setError(challengeErrorMessage(err, 'Failed to submit response.'))
       setState('error')
     }
   }, [challenge, simulationId])
@@ -154,21 +135,19 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
     setFollowup(null)
     setSelectedFocus(null)
     setError(null)
-    setMockFallback(false)
     setState('picking')
   }, [])
 
   // ── Retry ─────────────────────────────────────────────────────────────────
   const retry = useCallback(() => {
     setError(null)
-    setMockFallback(false)
     if (challenge) setState('challenging')
     else setState('picking')
   }, [challenge])
 
   return {
     state, loopCount, selectedFocus, challenge, followup,
-    error, isMockFallback,
+    error,
     open, close, selectFocus, startChallenge, submitResponse, challengeAgain, retry,
   }
 }

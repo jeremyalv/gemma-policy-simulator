@@ -10,12 +10,11 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
 
   /**
-   * Controls MSW mock mode. Mocks are ACTIVE by default (when absent or any
-   * value other than 'false'). Set to 'false' at build time to disable mocks
-   * and route requests to VITE_API_BASE_URL instead.
+   * Controls MSW mock mode. Mocks are DISABLED by default.
+   * Set to 'true' to enable mocks explicitly.
    *
-   * Example (CI/CD with real backend):
-   *   VITE_USE_MOCKS=false VITE_API_BASE_URL=https://api.example.com vite build
+   * Example (local mock mode):
+   *   VITE_USE_MOCKS=true vite dev
    */
   readonly VITE_USE_MOCKS: string
 }
