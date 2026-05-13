@@ -26,7 +26,26 @@ def _ollama_base_url() -> str:
 
 
 def _clarification_model() -> str:
-    return os.getenv("SIMS_CLARIFICATION_MODEL", DEFAULT_MODEL)
+    for key in ("SIMS_CLARIFICATION_MODEL", "SIMS_RUN_MODEL", "SIMS_OLLAMA_MODEL"):
+        value = os.getenv(key)
+        if value is not None and value.strip():
+            return value.strip()
+    return DEFAULT_MODEL
+
+
+def _timeout_seconds() -> int:
+    raw = (
+        os.getenv("SIMS_CLARIFICATION_TIMEOUT_SECONDS")
+        or os.getenv("SIMS_RUN_TIMEOUT_SECONDS")
+        or os.getenv("SIMS_OLLAMA_TIMEOUT_SECONDS")
+    )
+    if raw is None:
+        return DEFAULT_TIMEOUT_SECONDS
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return DEFAULT_TIMEOUT_SECONDS
+    return max(1, parsed)
 
 
 def _build_prompt(policy_text: str, focus: str) -> str:
@@ -81,10 +100,23 @@ def _call_ollama(prompt: str) -> dict[str, Any]:
     )
 
     try:
-        with request.urlopen(req, timeout=DEFAULT_TIMEOUT_SECONDS) as resp:
+        with request.urlopen(req, timeout=_timeout_seconds()) as resp:
             response_body = resp.read()
+    except error.HTTPError as exc:
+        detail = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+            if body:
+                detail = f" {body}"
+        except Exception:
+            detail = ""
+        raise ClarificationGenerationError(
+            f"model runtime returned error: HTTP {exc.code}{detail}"
+        ) from exc
     except error.URLError as exc:
-        raise ClarificationGenerationError("failed to reach model runtime") from exc
+        reason = getattr(exc, "reason", None)
+        suffix = f": {reason}" if reason else ""
+        raise ClarificationGenerationError(f"failed to reach model runtime{suffix}") from exc
     except TimeoutError as exc:
         raise ClarificationGenerationError("model runtime timed out") from exc
     except Exception as exc:

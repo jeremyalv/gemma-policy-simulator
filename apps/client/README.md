@@ -12,6 +12,38 @@ Integration contract source:
 - `docs/contracts/frontend-backend-v1.md`
 - `packages/contracts/`
 
+## Quickstart (Run Frontend)
+
+Prerequisite:
+- Node.js 20+ and npm.
+- If using real backend mode, backend server must be running at `http://localhost:8000`.
+
+Install dependencies:
+
+```bash
+cd apps/client
+npm ci
+```
+
+Start dev server (recommended for MVP integration):
+
+```bash
+cd apps/client
+VITE_USE_MOCKS=false VITE_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
+Open:
+- `http://localhost:5173`
+
+Other useful commands:
+
+```bash
+cd apps/client
+npm run test -- --run
+npm run typecheck
+npm run build
+```
+
 ## Runtime modes
 
 - `VITE_USE_MOCKS=false` (default behavior when unset): MVP sign-off mode, frontend talks to real backend only.
@@ -22,7 +54,7 @@ Examples:
 ```bash
 # Sign-off mode (real backend)
 cd apps/client
-VITE_USE_MOCKS=false VITE_API_BASE_URL=http://localhost:8000/api/v1 npm run dev
+VITE_USE_MOCKS=false VITE_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
 ```bash

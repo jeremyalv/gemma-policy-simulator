@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from packages.contracts.python.contracts_v1 import ErrorEnvelope
 
@@ -69,6 +70,19 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     store = SimulationStore(db_path or default_db_path())
     # Ensure schema exists even before startup hooks run in certain test harnesses.
     store.ensure_schema()
+
+    cors_origins = os.getenv(
+        "SIMS_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+    allowed_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.on_event("startup")
     def startup() -> None:

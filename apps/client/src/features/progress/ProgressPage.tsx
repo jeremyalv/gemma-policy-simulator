@@ -25,7 +25,7 @@ import {
 import { runSimulation, ApiError } from '@/api'
 import { isBackendDownError, BACKEND_DOWN_MESSAGE } from '@/lib/api-errors'
 import { generateIdempotencyKey } from '@/lib/idempotency'
-import { formatNumber, formatDuration } from '@/lib/format'
+import { formatNumber, formatDuration, formatPct } from '@/lib/format'
 import { notifications } from '@mantine/notifications'
 import { Layout } from '@/components/layout/Layout'
 import { MilestoneSteps } from './MilestoneSteps'
@@ -238,7 +238,8 @@ export default function ProgressPage() {
 
   const d           = statusData
   const status      = d?.status ?? 'running'
-  const pct         = d?.progress_pct ?? 0
+  const pctRaw      = d?.progress_pct ?? 0
+  const pct         = Number(pctRaw.toFixed(1))
   const isFailed    = status === 'failed'
   const isCompleted = status === 'completed'
   const telemetry   = d?.run_telemetry ?? null
@@ -356,7 +357,7 @@ export default function ProgressPage() {
                       border: 'none',
                     }}
                   >
-                    {pct}%
+                    {formatPct(pct, 1)}
                   </Badge>
                 </Group>
                 <Progress

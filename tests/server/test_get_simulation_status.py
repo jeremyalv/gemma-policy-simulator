@@ -33,6 +33,10 @@ def _insert_row(
     run_failure_code: str | None = None,
     run_failure_message: str | None = None,
     run_failed_persona_id: str | None = None,
+    run_attempted_count: int = 0,
+    run_success_count: int = 0,
+    run_failed_count: int = 0,
+    run_success_rate: float = 0.0,
 ) -> None:
     with sqlite3.connect(db_path) as conn:
         conn.execute(
@@ -43,8 +47,9 @@ def _insert_row(
                 started_at, runtime_profile, effective_sample_size, estimated_seconds,
                 run_idempotency_key, run_request_fingerprint, run_prompt_source, run_retry_count,
                 run_invalid_output_count, run_failure_code, run_failure_message, run_failed_persona_id,
+                run_attempted_count, run_success_count, run_failed_count, run_success_rate,
                 clarification_status, clarification_turn_index, current_clarification_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 simulation_id,
@@ -70,6 +75,10 @@ def _insert_row(
                 run_failure_code,
                 run_failure_message,
                 run_failed_persona_id,
+                run_attempted_count,
+                run_success_count,
+                run_failed_count,
+                run_success_rate,
                 "none",
                 0,
                 None,
@@ -154,6 +163,35 @@ def test_get_simulation_status_pending_returns_zero_progress(tmp_path: Path) -> 
         "is_partial": False,
         "failure_breakdown": {},
     }
+
+
+def test_get_simulation_status_running_prefers_attempted_count_progress(tmp_path: Path) -> None:
+    client, db_path = _client_with_db(tmp_path)
+    _insert_row(
+        db_path,
+        simulation_id="sim_running_counts",
+        status="running",
+        sample_size=130,
+        effective_sample_size=130,
+        runtime_profile="auto",
+        started_at="2026-04-19T12:00:00Z",
+        estimated_seconds=300,
+        run_attempted_count=129,
+        run_success_count=127,
+        run_failed_count=2,
+        run_success_rate=127 / 129,
+    )
+
+    response = client.get("/api/v1/simulations/sim_running_counts/status")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["status"] == "running"
+    assert data["agents_total"] == 130
+    assert data["agents_completed"] == 129
+    assert data["progress_pct"] == pytest.approx((129 / 130) * 100, rel=0, abs=1e-9)
+    assert data["run_telemetry"]["attempted_count"] == 129
+    assert data["run_telemetry"]["success_count"] == 127
+    assert data["run_telemetry"]["failed_count"] == 2
 
 
 def test_get_simulation_status_completed_returns_terminal_progress(tmp_path: Path) -> None:

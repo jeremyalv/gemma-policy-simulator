@@ -49,6 +49,7 @@ from .simulation_runner import (
     SimulationRunError,
     build_policy_prompt,
     generate_policy_response_with_ollama,
+    prompt_template_version,
     resolve_batch_size,
     resolve_max_retries,
     resolve_run_model,
@@ -151,6 +152,7 @@ def _derive_progress_snapshot(
     elapsed_seconds: int,
     estimated_seconds: int,
     has_timing: bool,
+    attempted_count: int,
 ) -> tuple[int, float, int]:
     if status == "pending":
         return 0, 0.0, 0
@@ -159,6 +161,12 @@ def _derive_progress_snapshot(
         return agents_total, 100.0, 0
 
     if status == "running":
+        if agents_total > 0 and attempted_count > 0:
+            progress_pct = min(99.9, max(0.0, (attempted_count / agents_total) * 100.0))
+            agents_completed = min(agents_total, attempted_count)
+            estimated_seconds_remaining = max(0, estimated_seconds - elapsed_seconds)
+            return agents_completed, float(progress_pct), estimated_seconds_remaining
+
         raw_progress = (elapsed_seconds / estimated_seconds) * 100 if estimated_seconds > 0 else 0.0
         progress_pct = min(99.9, max(0.0, raw_progress))
         agents_completed = min(agents_total, math.floor((agents_total * progress_pct) / 100))
@@ -776,6 +784,20 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
                 if persona_success and parsed is not None:
                     outputs.append({"persona": persona, "response": parsed})
 
+                attempted_now = int(telemetry["attempted_count"])
+                success_now = int(telemetry["success_count"])
+                failed_now = int(telemetry["failed_count"])
+                success_rate_now = (success_now / attempted_now) if attempted_now > 0 else 0.0
+                store.update_running_progress(
+                    simulation_id=simulation_id,
+                    run_retry_count=int(telemetry["retry_count"]),
+                    run_invalid_output_count=int(telemetry["invalid_output_count"]),
+                    run_attempted_count=attempted_now,
+                    run_success_count=success_now,
+                    run_failed_count=failed_now,
+                    run_success_rate=float(success_rate_now),
+                )
+
         attempted_count = int(telemetry["attempted_count"])
         success_count = int(telemetry["success_count"])
         failed_count = int(telemetry["failed_count"])
@@ -801,6 +823,8 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             "model": resolve_run_model(),
             "dataset_version": simulation.get("run_dataset_version") or dataset_metadata["dataset_version"],
             "sampling_seed": simulation.get("run_sampling_seed") or dataset_metadata["sampling_seed"],
+            "prompt_template_version": prompt_template_version(),
+            "prompt_calibration_enabled": True,
             "output_count": len(outputs),
             "raw_outputs": outputs,
             "run_telemetry": telemetry,
@@ -849,6 +873,8 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
             "model": resolve_run_model(),
             "dataset_version": simulation.get("run_dataset_version") if "simulation" in locals() and isinstance(simulation, dict) else None,
             "sampling_seed": simulation.get("run_sampling_seed") if "simulation" in locals() and isinstance(simulation, dict) else None,
+            "prompt_template_version": prompt_template_version(),
+            "prompt_calibration_enabled": True,
             "output_count": len(outputs),
             "raw_outputs": outputs,
             "run_telemetry": {
@@ -899,12 +925,14 @@ def get_simulation_status(store: SimulationStore, simulation_id: str) -> Simulat
     elapsed_seconds = _elapsed_seconds_from_started_at(simulation.get("started_at"))
     has_timing = _parse_utc_timestamp(simulation.get("started_at")) is not None
 
+    status_telemetry = _status_run_telemetry(simulation)
     agents_completed, progress_pct, estimated_seconds_remaining = _derive_progress_snapshot(
         status=status,
         agents_total=agents_total,
         elapsed_seconds=elapsed_seconds,
         estimated_seconds=estimated_seconds,
         has_timing=has_timing,
+        attempted_count=int(status_telemetry["attempted_count"]),
     )
 
     return cast(
@@ -919,7 +947,7 @@ def get_simulation_status(store: SimulationStore, simulation_id: str) -> Simulat
                 "estimated_seconds_remaining": estimated_seconds_remaining,
                 "runtime_profile": runtime_profile,
                 "effective_sample_size": agents_total,
-                "run_telemetry": _status_run_telemetry(simulation),
+                "run_telemetry": status_telemetry,
             },
             "error": None,
             "meta": {"request_id": new_request_id()},

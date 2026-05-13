@@ -15,6 +15,7 @@ DEFAULT_MODEL = "gemma"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_MAX_RETRIES = 1
+PROMPT_TEMPLATE_VERSION = "run_calibrated_v1"
 
 STATES = ["CA", "TX", "FL", "NY", "WA", "IL", "PA", "OH"]
 SEXES = ["female", "male"]
@@ -172,8 +173,22 @@ def generate_personas(*, simulation_id: str, count: int, filters: dict[str, Any]
 
 def build_policy_prompt(*, policy_text: str, persona: dict[str, Any]) -> str:
     return (
-        "You are a synthetic policy simulation respondent.\n"
-        "Read the policy and persona context, then return strictly valid JSON with these keys:\n"
+        "You are a synthetic policy simulation respondent and neutral evaluator.\n"
+        "Evaluate the policy using the persona context. Do not assume the policy is good by default.\n"
+        "Before choosing approval, internally assess:\n"
+        "- benefits\n"
+        "- costs\n"
+        "- implementation risk\n"
+        "- fairness/distribution risk\n"
+        "- rights/liberty concerns (when relevant)\n"
+        "Use this approval rubric strictly:\n"
+        "- 1: strongly oppose, major harms/rights concerns dominate\n"
+        "- 2: oppose, risks likely outweigh benefits\n"
+        "- 3: mixed/uncertain, tradeoffs balanced or unclear\n"
+        "- 4: support with reservations/conditions\n"
+        "- 5: strong support, benefits clearly outweigh risks\n"
+        "Do not default to 4 or 5 unless your rationale explicitly addresses risks and tradeoffs for this persona.\n"
+        "Return strictly valid JSON with these keys:\n"
         "- approval (integer 1-5)\n"
         "- emotion (string)\n"
         "- rationale (string, 2-3 sentences)\n"
@@ -181,6 +196,10 @@ def build_policy_prompt(*, policy_text: str, persona: dict[str, Any]) -> str:
         f"Policy text:\n{policy_text}\n\n"
         f"Persona:\n{json.dumps(persona, ensure_ascii=True)}\n"
     )
+
+
+def prompt_template_version() -> str:
+    return PROMPT_TEMPLATE_VERSION
 
 
 def _call_ollama(prompt: str) -> dict[str, Any]:

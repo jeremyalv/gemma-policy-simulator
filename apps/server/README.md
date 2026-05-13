@@ -112,3 +112,26 @@ SAMPLE_SIZE=100 \
 ```
 
 The script saves request/response artifacts under `/tmp/infinipol-smoke/run-<timestamp>/`.
+
+## Calibrated Prompting (Anti-Over-Agreeability)
+
+Run inference now uses a calibrated prompt template (`run_calibrated_v1`) that:
+- forces internal tradeoff evaluation (benefits, costs, implementation risk, fairness/distribution risk, rights/liberty concerns),
+- anchors approval scores to a strict 1..5 rubric,
+- discourages defaulting to 4/5 without explicit persona-grounded risk analysis.
+
+This does not change any API response contracts. For observability, run artifacts include:
+- `prompt_template_version`
+- `prompt_calibration_enabled`
+
+### Reproducible local calibration check
+
+Use fixed seed semantics (derived from simulation id) and run at least 3 controversial policies, each with 2 simulation ids:
+- Nationwide Assault Weapons Buyback
+- Federal Carbon Tax + Dividend
+- National E-Verify + Legalization Pathway
+
+Expected signal:
+- Approval distribution should typically span at least 3 score buckets.
+- Means should not be uniformly pinned at 4.5+ across all controversial cases.
+- Representative rationales should include both benefits and risks.

@@ -139,6 +139,8 @@ def test_run_worker_eventually_completes_and_writes_artifact(
     assert payload["simulation_id"] == "sim_async_ok"
     assert payload["dataset_version"] == "test-v1"
     assert payload["sampling_seed"] == 123
+    assert payload["prompt_template_version"] == "run_calibrated_v1"
+    assert payload["prompt_calibration_enabled"] is True
     assert payload["output_count"] == 12
     assert len(payload["raw_outputs"]) == 12
     assert payload["run_telemetry"] == {

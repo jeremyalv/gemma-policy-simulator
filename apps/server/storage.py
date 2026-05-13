@@ -426,6 +426,42 @@ class SimulationStore:
             )
             return int(cursor.rowcount)
 
+    def update_running_progress(
+        self,
+        *,
+        simulation_id: str,
+        run_retry_count: int,
+        run_invalid_output_count: int,
+        run_attempted_count: int,
+        run_success_count: int,
+        run_failed_count: int,
+        run_success_rate: float,
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE simulations
+                SET
+                    run_retry_count = ?,
+                    run_invalid_output_count = ?,
+                    run_attempted_count = ?,
+                    run_success_count = ?,
+                    run_failed_count = ?,
+                    run_success_rate = ?
+                WHERE id = ? AND status = 'running'
+                """,
+                (
+                    run_retry_count,
+                    run_invalid_output_count,
+                    run_attempted_count,
+                    run_success_count,
+                    run_failed_count,
+                    run_success_rate,
+                    simulation_id,
+                ),
+            )
+            return int(cursor.rowcount)
+
     def fail_simulation_run(
         self,
         *,
