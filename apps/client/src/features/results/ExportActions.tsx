@@ -30,20 +30,27 @@ export function ExportActions({ simulationId, compact = false }: ExportActionsPr
     try {
       await fetchSimulationCsv(simulationId)
     } catch (err) {
-      const isLifecycle = err instanceof ApiError && err.httpStatus === 409
-      const isNotFound  = err instanceof ApiError && err.httpStatus === 404
+      const isNotFound   = err instanceof ApiError && err.httpStatus === 404
+      const isLifecycle  = err instanceof ApiError && err.httpStatus === 409
+      const isFailed     = isLifecycle && (err as ApiError).code === 'SIMULATION_FAILED'
+      const isNotComplete = isLifecycle && !isFailed
+
       notifications.show({
-        title: isLifecycle
+        title: isFailed
+          ? 'Simulation failed — no export'
+          : isNotComplete
           ? 'Export not ready'
           : isNotFound
           ? 'Simulation not found'
           : 'Export failed',
-        message: isLifecycle
-          ? 'The simulation is not yet complete. Export will be available once it finishes.'
+        message: isFailed
+          ? 'This simulation failed and did not produce exportable results. Retry the simulation from the status page.'
+          : isNotComplete
+          ? 'The simulation is not yet complete. The CSV export will be available once it finishes.'
           : isNotFound
           ? 'This simulation no longer exists.'
           : (err instanceof Error ? err.message : 'Could not download the CSV. Please try again.'),
-        color: isLifecycle ? 'orange' : 'red',
+        color: isFailed ? 'red' : isNotComplete ? 'orange' : 'red',
       })
     } finally {
       setDownloading(false)

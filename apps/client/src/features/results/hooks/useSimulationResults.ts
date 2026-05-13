@@ -3,9 +3,10 @@
  * Only valid when simulation status === 'completed'.
  *
  * Error handling per lifecycle contract:
- *   409 -> simulation is still running or failed (LIFECYCLE_CONFLICT)
- *   404 -> simulation not found (NOT_FOUND)
- *   other -> generic error
+ *   409 + code=SIMULATION_FAILED    -> simulation failed; user must retry from status page
+ *   409 + other code (NOT_COMPLETE) -> simulation is still running or pending
+ *   404                             -> simulation not found (NOT_FOUND)
+ *   other                           -> generic error
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -14,13 +15,28 @@ import { ApiError } from '@/lib/envelope'
 
 export const resultsQueryKey = (id: string) => ['simulation-results', id] as const
 
-/** Classified error type for lifecycle-gated result states. */
-export type ResultsErrorKind = 'lifecycle_conflict' | 'not_found' | 'other'
+/**
+ * Classified error kinds for lifecycle-gated result states.
+ *
+ * - simulation_failed: 409 + SIMULATION_FAILED — run errored; must retry from status page
+ * - lifecycle_conflict: 409 + other — still running or not yet started
+ * - not_found: 404 — simulation deleted or never existed
+ * - other: generic network / server error
+ */
+export type ResultsErrorKind =
+  | 'simulation_failed'
+  | 'lifecycle_conflict'
+  | 'not_found'
+  | 'other'
 
 export function classifyResultsError(error: unknown): ResultsErrorKind {
   if (error instanceof ApiError) {
-    if (error.httpStatus === 409) return 'lifecycle_conflict'
     if (error.httpStatus === 404) return 'not_found'
+    if (error.httpStatus === 409) {
+      return error.code === 'SIMULATION_FAILED'
+        ? 'simulation_failed'
+        : 'lifecycle_conflict'
+    }
   }
   return 'other'
 }

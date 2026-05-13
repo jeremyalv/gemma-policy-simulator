@@ -14,8 +14,9 @@ import {
   Stack, Title, Text, Group, Button, Box,
   Tabs, Alert, Center, Skeleton, SimpleGrid, Affix, Transition,
 } from '@mantine/core'
-import { AlertCircle, ArrowLeft, GitCompare, Swords } from 'lucide-react'
+import { AlertCircle, ArrowLeft, GitCompare, RefreshCw, Swords } from 'lucide-react'
 import { Layout }               from '@/components/layout/Layout'
+import { RunQualityBanner }     from './RunQualityBanner'
 import { ExecutiveSummary }     from './ExecutiveSummary'
 import { ApprovalDistribution } from './charts/ApprovalDistribution'
 import { DemographicTabs }      from './charts/DemographicTabs'
@@ -27,6 +28,7 @@ import { ApprovalHeatmap }      from './charts/ApprovalHeatmap'
 import { ExportActions }        from './ExportActions'
 import { ChallengeDrawer }      from '@/features/challenge/ChallengeDrawer'
 import { useSimulationResults } from './hooks/useSimulationResults'
+import { useRunTelemetry }      from './hooks/useRunTelemetry'
 import { buildSankeyData }      from './aggregators'
 
 // ── Section card ─────────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ export default function ResultsPage() {
   const [challengeOpen,  setChallengeOpen]  = useState(false)
 
   const { results, isLoading, isError, error, errorKind } = useSimulationResults(simulationId!)
+  const { runTelemetry }                                  = useRunTelemetry(simulationId!)
 
   const sankeyData = useMemo(() => {
     if (!results) return { nodes: [], links: [] }
@@ -103,7 +106,45 @@ export default function ResultsPage() {
 
   // ── Error ────────────────────────────────────────────────────────────────
   if (isError || !results) {
-    // Simulation not complete yet (still running, pending, or failed)
+    // Simulation run errored out — user must retry from status page
+    if (errorKind === 'simulation_failed') {
+      return (
+        <Layout>
+          <Center h={400}>
+            <Stack align="center" gap="lg" maw={440}>
+              <Alert
+                icon={<AlertCircle size={16} />}
+                color="red"
+                title="Simulation failed"
+                w="100%"
+              >
+                This simulation encountered an error and did not produce results.
+                View the status page to see failure details and retry.
+              </Alert>
+              <Group gap="sm">
+                <Button
+                  leftSection={<RefreshCw size={14} />}
+                  onClick={() => navigate(`/simulations/${simulationId}`)}
+                  style={{ backgroundColor: 'var(--color-accent-primary)', color: '#fff' }}
+                >
+                  View Status &amp; Retry
+                </Button>
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<ArrowLeft size={14} />}
+                  onClick={() => navigate('/simulations')}
+                >
+                  Back to Simulations
+                </Button>
+              </Group>
+            </Stack>
+          </Center>
+        </Layout>
+      )
+    }
+
+    // Simulation not complete yet (still running or pending)
     if (errorKind === 'lifecycle_conflict') {
       return (
         <Layout>
@@ -115,8 +156,8 @@ export default function ResultsPage() {
                 title="Simulation not complete"
                 w="100%"
               >
-                This simulation has not finished yet, or encountered a failure.
-                Check the status page to see the current state and retry if needed.
+                This simulation has not finished yet. Check the status page
+                to monitor progress, then come back when it completes.
               </Alert>
               <Button
                 leftSection={<ArrowLeft size={14} />}
@@ -256,6 +297,9 @@ export default function ResultsPage() {
             <ExportActions simulationId={simulationId!} />
           </Group>
         </Group>
+
+        {/* ── Run quality banner (partial results warning) ─────────── */}
+        {runTelemetry && <RunQualityBanner telemetry={runTelemetry} />}
 
         {/* ── Tabbed content ────────────────────────────────────────── */}
         <Tabs

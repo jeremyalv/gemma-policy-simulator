@@ -45,9 +45,11 @@ export default function ClarificationPage() {
   const locationState = (window.history.state?.usr ?? {}) as {
     title?: string
     policy_text?: string
+    runtime_profile?: string
   }
-  const policyTitle = locationState.title ?? 'Policy Simulation'
-  const policyText  = locationState.policy_text ?? 'Policy description not available.'
+  const policyTitle   = locationState.title ?? 'Policy Simulation'
+  const policyText    = locationState.policy_text ?? 'Policy description not available.'
+  const runtimeProfile = (locationState.runtime_profile ?? 'auto') as 'interactive' | 'balanced' | 'thorough' | 'auto'
 
   // ── Clarification flow ────────────────────────────────────────────────────
   async function handleComplete(refinedText: string | null) {
@@ -85,7 +87,7 @@ export default function ClarificationPage() {
     try {
       await runSimulation(
         simulationId,
-        { use_refined_prompt: useRefined },
+        { use_refined_prompt: useRefined, profile: runtimeProfile },
         generateIdempotencyKey(),
       )
       navigate(`/simulations/${simulationId}`)

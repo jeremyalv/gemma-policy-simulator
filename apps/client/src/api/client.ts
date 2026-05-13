@@ -1,5 +1,5 @@
 /**
- * SIMS API Base Client
+ * InfiniPol API Base Client
  *
  * Thin fetch wrapper that:
  * 1. Prepends the API base URL

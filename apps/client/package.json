@@ -1,5 +1,5 @@
 {
-  "name": "sims-client",
+  "name": "infinipol-client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -45,6 +45,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.5.2",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^29.1.1",
     "msw": "^2.9.1",
     "openapi-typescript": "^7.8.0",
     "postcss": "^8.5.4",

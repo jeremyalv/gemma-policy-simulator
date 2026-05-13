@@ -7,7 +7,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { createSimulation, type SimulationDraft } from '@/api'
+import { createSimulation, runSimulation, type SimulationDraft } from '@/api'
 import { generateIdempotencyKey } from '@/lib/idempotency'
 import { notifications } from '@mantine/notifications'
 import { SIMULATIONS_QUERY_KEY } from '@/features/dashboard/hooks/useSimulations'
@@ -45,21 +45,34 @@ export function useCreateSimulation() {
       )
     },
 
-    onSuccess: (sim: SimulationDraft, { values, options }) => {
+    onSuccess: async (sim: SimulationDraft, { values, options }) => {
       // Invalidate dashboard list so new sim appears immediately
       queryClient.invalidateQueries({ queryKey: SIMULATIONS_QUERY_KEY })
 
       if (options.withClarification) {
-        // Pass policy context via location.state so ClarificationPage can render
-        // the policy panel without re-fetching the simulation draft
+        // Pass policy context + profile via location.state so ClarificationPage
+        // can render the policy panel and eventually pass profile to /run
         navigate(`/simulations/${sim.id}/clarify`, {
           state: {
-            title:       values.title,
-            policy_text: values.policy_text,
+            title:          values.title,
+            policy_text:    values.policy_text,
+            runtime_profile: values.runtime_profile ?? 'auto',
           },
         })
       } else {
-        navigate(`/simulations/${sim.id}`)
+        // "Run Directly": fire POST /run immediately after draft creation
+        try {
+          await runSimulation(
+            sim.id,
+            { profile: values.runtime_profile ?? 'auto' },
+            generateIdempotencyKey(),
+          )
+        } catch {
+          // Non-fatal — navigate to progress page anyway so user can retry
+        }
+        navigate(`/simulations/${sim.id}`, {
+          state: { title: values.title },
+        })
       }
     },
 

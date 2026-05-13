@@ -4,14 +4,48 @@
  * Section 3 of the Create Simulation form.
  */
 
-import { Stack, Slider, NumberInput, Group, Text, Box, Textarea } from '@mantine/core'
+import { Stack, Slider, NumberInput, Group, Text, Box, Textarea, SegmentedControl, Tooltip } from '@mantine/core'
 import type { UseFormReturnType } from '@mantine/form'
 import type { CreateSimulationFormValues } from '../schema'
 import { SAMPLE_MIN, SAMPLE_MAX } from '../constants'
+import type { RuntimeProfile } from '@/api'
 
 interface SampleSectionProps {
   form: UseFormReturnType<CreateSimulationFormValues>
 }
+
+// Runtime profile options
+const PROFILE_OPTIONS: {
+  value: RuntimeProfile
+  label: string
+  description: string
+  eta: (n: number) => string
+}[] = [
+  {
+    value: 'interactive',
+    label: 'Interactive',
+    description: 'Fastest — lower inference depth. Best for quick drafts and iteration.',
+    eta: (n) => n <= 300 ? '~15 s' : n <= 1000 ? '~30 s' : '~1 min',
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'Good trade-off between depth and speed. Recommended for most simulations.',
+    eta: (n) => n <= 300 ? '~30 s' : n <= 1000 ? '~1 min' : '~2 min',
+  },
+  {
+    value: 'thorough',
+    label: 'Thorough',
+    description: 'Full inference depth. Best for final runs and stakeholder reports.',
+    eta: (n) => n <= 300 ? '~1 min' : n <= 1000 ? '~3 min' : '~6 min',
+  },
+  {
+    value: 'auto',
+    label: 'Auto',
+    description: 'System selects the optimal profile based on sample size and load.',
+    eta: () => 'Varies',
+  },
+]
 
 // Marks at useful milestones
 const SLIDER_MARKS = [
@@ -22,14 +56,9 @@ const SLIDER_MARKS = [
   { value: 2000, label: '2k' },
 ]
 
-// TODO: replace with real telemetry once the backend reports actual inference timing.
-// These values are rough estimates and have not been benchmarked against production.
-function runtimeEstimate(n: number): string {
-  if (n <= 100)  return '~15 s (estimate)'
-  if (n <= 300)  return '~30 s (estimate)'
-  if (n <= 500)  return '~1 min (estimate)'
-  if (n <= 1000) return '~2 min (estimate)'
-  return '~4 min (estimate)'
+function runtimeEstimate(profile: RuntimeProfile, n: number): string {
+  const p = PROFILE_OPTIONS.find((o) => o.value === profile) ?? PROFILE_OPTIONS[3]
+  return `${p.eta(n)} (estimate)`
 }
 
 // NOTE: These labels describe AI inference volume, NOT statistical validity.
@@ -45,7 +74,8 @@ function accuracyLabel(n: number): string {
 }
 
 export function SampleSection({ form }: SampleSectionProps) {
-  const value = form.values.sample_size
+  const value   = form.values.sample_size
+  const profile = form.values.runtime_profile ?? 'auto'
 
   function handleChange(v: number) {
     const clamped = Math.max(SAMPLE_MIN, Math.min(SAMPLE_MAX, Math.round(v)))
@@ -114,12 +144,67 @@ export function SampleSection({ form }: SampleSectionProps) {
         <Text size="xs" c="var(--color-text-tertiary)">Output variance</Text>
         <Text size="xs" fw={500} c="var(--color-text-secondary)">{accuracyLabel(value)}</Text>
         <Text size="xs" c="var(--color-text-tertiary)">Estimated runtime</Text>
-        <Text size="xs" fw={500} c="var(--color-text-secondary)">{runtimeEstimate(value)}</Text>
+        <Text size="xs" fw={500} c="var(--color-text-secondary)">{runtimeEstimate(profile, value)}</Text>
       </Box>
 
       {form.errors.sample_size && (
         <Text size="xs" c="var(--color-status-error)">{form.errors.sample_size}</Text>
       )}
+
+      {/* Runtime profile */}
+      <Box>
+        <Text fw={600} size="sm" c="var(--color-text-primary)" mb={4}>
+          Runtime Profile
+        </Text>
+        <Text size="xs" c="var(--color-text-tertiary)" mb={8} lh={1.5}>
+          Controls inference depth and speed. <b>Auto</b> is recommended for most cases.
+        </Text>
+        <SegmentedControl
+          fullWidth
+          value={profile}
+          onChange={(v) => form.setFieldValue('runtime_profile', v as RuntimeProfile)}
+          data={PROFILE_OPTIONS.map((o) => ({
+            value: o.value,
+            label: (
+              <Tooltip
+                label={o.description}
+                multiline
+                w={220}
+                withArrow
+                position="top"
+                key={o.value}
+              >
+                <Text size="xs" fw={600} style={{ cursor: 'default' }}>
+                  {o.label}
+                </Text>
+              </Tooltip>
+            ),
+          }))}
+          styles={{
+            root: {
+              backgroundColor: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border-default)',
+              borderRadius: 8,
+            },
+            indicator: {
+              backgroundColor: 'var(--color-accent-primary)',
+              borderRadius: 6,
+            },
+            label: {
+              color: 'var(--color-text-secondary)',
+              padding: '6px 8px',
+            },
+            control: {
+              border: 'none',
+            },
+          }}
+        />
+        {profile !== 'auto' && (
+          <Text size="xs" c="var(--color-text-tertiary)" mt={6} lh={1.5}>
+            {PROFILE_OPTIONS.find((o) => o.value === profile)?.description}
+          </Text>
+        )}
+      </Box>
 
       {/* Disclaimer */}
       <Text size="xs" c="var(--color-text-tertiary)" lh={1.5} style={{ fontStyle: 'italic' }}>

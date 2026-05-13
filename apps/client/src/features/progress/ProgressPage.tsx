@@ -20,7 +20,7 @@ import {
   Card,
 } from '@mantine/core'
 import {
-  CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Lightbulb, Plus, ArrowLeft,
+  CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Lightbulb, Plus, ArrowLeft, RotateCcw,
 } from 'lucide-react'
 import { runSimulation, ApiError } from '@/api'
 import { isBackendDownError, BACKEND_DOWN_MESSAGE } from '@/lib/api-errors'
@@ -137,7 +137,7 @@ export default function ProgressPage() {
   const simulationTitle = (location.state as { title?: string } | null)?.title
   const [isRetrying, setIsRetrying] = useState(false)
 
-  const { statusData, isLoading, isError, error, errorKind } = useStatusPolling({
+  const { statusData, isLoading, isError, errorKind, refetch } = useStatusPolling({
     simulationId: simulationId!,
     autoRedirect: true,
   })
@@ -184,29 +184,52 @@ export default function ProgressPage() {
   // ── Error fetching status ─────────────────────────────────────────────────
   if (isError) {
     const isNotFound = errorKind === 'not_found'
+    // Transient errors (parse failure, network hiccup) get a friendly
+    // auto-retry message; genuine not-found gets the definitive message.
+    const isTransient = !isNotFound
     return (
       <Layout>
         <Center h={400}>
           <Stack gap="lg" align="center" maw={440}>
             <Alert
               icon={<AlertCircle size={16} />}
-              color={isNotFound ? 'gray' : 'red'}
-              title={isNotFound ? 'Simulation not found' : 'Could not load simulation status'}
+              color={isNotFound ? 'gray' : 'orange'}
+              title={
+                isNotFound
+                  ? 'Simulation not found'
+                  : 'Could not connect to simulation'
+              }
               w="100%"
             >
               {isNotFound
                 ? 'This simulation does not exist or has been deleted.'
-                : ((error as Error)?.message ?? 'Unknown error.')}
+                : 'There was a connection issue loading the simulation status. This can happen during page load. Click "Try Again" or wait, the page will auto-retry.'}
             </Alert>
-            <Button
-              variant="subtle"
-              color="gray"
-              size="sm"
-              leftSection={<ArrowLeft size={14} />}
-              onClick={() => navigate('/simulations')}
-            >
-              Back to Simulations
-            </Button>
+            <Group gap="sm">
+              {isTransient && (
+                <Button
+                  variant="filled"
+                  size="sm"
+                  leftSection={<RotateCcw size={14} />}
+                  onClick={() => refetch()}
+                  style={{
+                    backgroundColor: 'var(--color-accent-primary)',
+                    color: '#fff',
+                  }}
+                >
+                  Try Again
+                </Button>
+              )}
+              <Button
+                variant="subtle"
+                color="gray"
+                size="sm"
+                leftSection={<ArrowLeft size={14} />}
+                onClick={() => navigate('/simulations')}
+              >
+                Back to Simulations
+              </Button>
+            </Group>
           </Stack>
         </Center>
       </Layout>

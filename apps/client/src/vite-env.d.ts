@@ -6,7 +6,7 @@ declare module '@fontsource-variable/ibm-plex-sans'
 declare module '@fontsource-variable/jetbrains-mono'
 
 interface ImportMetaEnv {
-  /** Base URL of the SIMS backend API. Defaults to '' (same origin). */
+  /** Base URL of the InfiniPol backend API. Defaults to '' (same origin). */
   readonly VITE_API_BASE_URL: string
 
   /**

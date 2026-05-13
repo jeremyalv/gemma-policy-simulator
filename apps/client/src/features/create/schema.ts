@@ -74,6 +74,9 @@ export const CreateSimulationSchema = z.object({
 
   filters: FilterSetSchema.optional(),
 
+  // Runtime profile — passed to POST /run (not POST /simulations)
+  runtime_profile: z.enum(['interactive', 'balanced', 'thorough', 'auto']).default('auto'),
+
   // UI-only fields — not sent to the API
   sector: z.array(z.string()).optional(),
   sample_justification: z.string().max(500, 'Justification must be 500 characters or less').optional(),
@@ -88,6 +91,7 @@ export const CREATE_FORM_DEFAULTS: CreateSimulationFormValues = {
   policy_text: '',
   dataset: 'nemotron_usa',
   sample_size: 500,
+  runtime_profile: 'auto',
   filters: {},
   sector: [],
   sample_justification: '',

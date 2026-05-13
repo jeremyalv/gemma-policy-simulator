@@ -1,5 +1,5 @@
 /**
- * SIMS API Envelope utilities.
+ * InfiniPol API Envelope utilities.
  *
  * ALL responses from the backend use this shape:
  *   { data: T | null, error: { code, message } | null, meta: { request_id, ... } }
@@ -40,6 +40,8 @@ export type ApiErrorCode =
   | 'UNSUPPORTED_FILTER'
   | 'NOT_FOUND'
   | 'LIFECYCLE_CONFLICT'
+  | 'SIMULATION_NOT_COMPLETE'
+  | 'SIMULATION_FAILED'
   | 'INFERENCE_ERROR'
   | string // allow unknown codes gracefully
 

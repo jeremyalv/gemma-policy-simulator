@@ -1,5 +1,5 @@
 /**
- * Formatting utilities for SIMS data.
+ * Formatting utilities for InfiniPol data.
  * All approval scores, dates, and percentages go through here.
  */
 

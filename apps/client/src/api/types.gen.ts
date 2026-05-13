@@ -312,6 +312,14 @@ export interface components {
             failure_code: string | null;
             failure_message: string | null;
             failed_persona_id: string | null;
+            attempted_count: number;
+            success_count: number;
+            failed_count: number;
+            success_rate: number;
+            is_partial: boolean;
+            failure_breakdown: {
+                [key: string]: number;
+            };
         };
         SimulationStatusData: {
             id: string;
@@ -708,6 +716,24 @@ export interface operations {
                     "application/json": components["schemas"]["SimulationResultsEnvelope"];
                 };
             };
+            /** @description Simulation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Simulation not completed or failed (SIMULATION_NOT_COMPLETE | SIMULATION_FAILED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
         };
     };
     generateClarification: {
@@ -955,6 +981,24 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            /** @description Simulation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Simulation not completed or failed (SIMULATION_NOT_COMPLETE | SIMULATION_FAILED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

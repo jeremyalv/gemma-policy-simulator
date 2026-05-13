@@ -1,5 +1,5 @@
 /**
- * SIMS API — Public barrel export
+ * InfiniPol API — Public barrel export
  * Import everything from '@/api' in components and hooks.
  */
 

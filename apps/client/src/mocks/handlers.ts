@@ -136,16 +136,19 @@ export const handlers = [
 
   // POST /simulations/:id/run → 202
   // Records start time so the status handler can compute time-based progress.
-  http.post(`${BASE}/simulations/:id/run`, ({ params }) => {
+  http.post(`${BASE}/simulations/:id/run`, async ({ params, request }) => {
     const id = params.id as string
     simStartTimes.set(id, Date.now())
+    // Echo back the requested profile (or default to 'balanced')
+    const body = await request.json().catch(() => ({})) as Record<string, unknown>
+    const profile = (body.profile as string | undefined) ?? 'balanced'
     return HttpResponse.json(
       envelope({
         id,
         status: 'running',
         started_at: new Date().toISOString(),
         estimated_seconds: Math.ceil(DEMO_DURATION_MS / 1000),
-        runtime_profile: 'balanced',
+        runtime_profile: profile,
         effective_sample_size: 480,
       }),
       { status: 202 },
@@ -173,6 +176,7 @@ export const handlers = [
         estimated_seconds_remaining: 0,
         runtime_profile: 'balanced',
         effective_sample_size: 0,
+        run_telemetry: TELEMETRY_OK,
       }))
     }
 

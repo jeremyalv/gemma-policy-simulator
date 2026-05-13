@@ -1,9 +1,10 @@
 /**
- * SIMS — React entry point
+ * InfiniPol — React entry point
  *
  * Boot order:
- *   1. Start MSW mock worker (dev/mock mode only)
- *   2. Mount React tree: ThemeProvider → QueryClientProvider → RouterProvider → App
+ *   1. Determine mock mode via isMockModeEnabled (explicit opt-in only)
+ *   2. Start MSW mock worker if VITE_USE_MOCKS=true
+ *   3. Mount React tree: ThemeProvider → QueryClientProvider → RouterProvider → App
  */
 
 import React from 'react'
@@ -31,7 +32,7 @@ import '@/styles/globals.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Stale after 30s — most SIMS data changes via explicit user action
+      // Stale after 30s; most data changes via explicit user action
       staleTime: 30_000,
       // Retry once on failure; don't hammer backend on hard 4xx
       retry: (failureCount, error: unknown) => {
@@ -75,7 +76,7 @@ async function prepare(): Promise<void> {
 
 prepare().then(() => {
   const root = document.getElementById('root')
-  if (!root) throw new Error('[SIMS] #root element not found in index.html')
+  if (!root) throw new Error('[InfiniPol] #root element not found in index.html')
 
   ReactDOM.createRoot(root).render(
     <React.StrictMode>

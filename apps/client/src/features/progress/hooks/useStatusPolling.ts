@@ -2,11 +2,13 @@
  * useStatusPolling -- polls GET /simulations/:id/status every 2.5 seconds.
  *
  * Contract rules:
- *  - Poll only while status === 'running'
- *  - Stop immediately on 'completed' or 'failed'
- *  - Stop on any fetch error (no point retrying a not-found)
+ *  - Poll every 2.5s while status is not a terminal state
+ *  - Stop on 'completed' or 'failed' (in data)
+ *  - Stop on 404 (simulation does not exist)
+ *  - Keep polling on transient errors so the page auto-recovers
+ *    (e.g. Service Worker activating after the first request fires)
+ *  - Retry up to 4 times per attempt before entering error state
  *  - TanStack Query handles cleanup on unmount automatically
- *  - refetchInterval: 2500ms
  */
 
 import { useEffect } from 'react'
@@ -37,23 +39,29 @@ export function useStatusPolling({
   const query = useQuery<SimulationStatusData>({
     queryKey: ['simulation-status', simulationId],
     queryFn:  () => getSimulationStatus(simulationId),
-    // Poll every 2.5s -- contract spec: 2-3s interval
+    // Poll every 2.5s -- contract spec: 2-3s interval.
+    // We deliberately keep polling even in error state so the page
+    // auto-recovers from transient failures (e.g. Service Worker
+    // activating slightly after the first fetch fires). Only hard
+    // terminal states and genuine not-found errors stop polling.
     refetchInterval: (q) => {
       const status = q.state.data?.status
       // Stop on terminal state
       if (status === 'completed' || status === 'failed') return false
-      // Stop on error (avoid hammering a 404)
-      if (q.state.error) return false
+      // Stop only for genuine not-found — everything else auto-recovers
+      const err = q.state.error
+      if (err instanceof ApiError && err.httpStatus === 404) return false
       return 2500
     },
     // Keep showing stale data while revalidating (no flicker)
     staleTime: 0,
     // Don't refetch on window focus -- we already poll aggressively
     refetchOnWindowFocus: false,
-    // Don't retry not-found -- it needs user action
+    // Retry up to 4 times so transient SW-timing misses self-heal
+    // before the error UI is ever shown.
     retry: (failureCount, error) => {
       if (error instanceof ApiError && error.httpStatus === 404) return false
-      return failureCount < 2
+      return failureCount < 4
     },
   })
 
