@@ -248,11 +248,16 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         except ApiError as exc:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
+        # Strip any character that could escape the Content-Disposition header
+        # (CR/LF for response splitting, quote for attribute escape). If the
+        # simulation_id is invalid the upstream service call will already have
+        # raised NOT_FOUND; this is defense-in-depth.
+        safe_id = "".join(c for c in simulation_id if c.isalnum() or c in ("_", "-"))[:32]
         return Response(
             content=csv_content,
             media_type="text/csv; charset=utf-8",
             headers={
-                "Content-Disposition": f'attachment; filename="infinipol-{simulation_id}-results.csv"'
+                "Content-Disposition": f'attachment; filename="infinipol-{safe_id}-results.csv"'
             },
         )
 

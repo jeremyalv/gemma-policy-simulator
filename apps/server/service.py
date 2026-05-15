@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import threading
 from collections import Counter
 from csv import DictWriter
@@ -60,6 +61,39 @@ from src.persona_engine.nemotron_usa import DatasetLoadError, sample_personas
 MAX_CLARIFICATION_TURNS = 3
 ALLOWED_RUNTIME_PROFILES = {"interactive", "balanced", "thorough", "auto"}
 PARTIAL_SUCCESS_THRESHOLD = 0.9
+
+# Strict format for IDs used in URL paths. Anything else is rejected up front so
+# user-controlled simulation_id strings can never be concatenated into file
+# paths (artifact path traversal) or response headers (CRLF injection).
+# Allows alphanumeric + _ - so test fixtures like "sim_001" and production
+# "sim_8c97b8f8" both pass, but path-traversal payloads like "../" do not.
+_SIM_ID_RE = re.compile(r"^sim_[A-Za-z0-9_-]{1,32}$")
+_CLARIFICATION_ID_RE = re.compile(r"^cl_[A-Za-z0-9_-]{1,32}$")
+_CHALLENGE_ID_RE = re.compile(r"^ch_[A-Za-z0-9_-]{1,32}$")
+
+
+def _validate_id_format(value: str, pattern: re.Pattern[str], kind: str) -> str:
+    if not isinstance(value, str) or not pattern.match(value):
+        raise ApiError(
+            code="NOT_FOUND",
+            message=f"{kind} not found: {value!r}",
+            status_code=404,
+        )
+    return value
+
+
+# Characters that trigger formula evaluation when a CSV is opened in Excel/Sheets.
+# Persona fields (rationale, emotion, name, etc.) flow from attacker-influenced
+# Ollama output; prefixing with ' neutralises the formula without altering the
+# visible text.
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: Any) -> str:
+    s = "" if value is None else str(value)
+    if s and s[0] in _CSV_FORMULA_PREFIXES:
+        return "'" + s
+    return s
 
 
 def new_simulation_id() -> str:
@@ -376,6 +410,11 @@ def list_simulation_history(
 
 
 def cleanup_simulation_artifacts(simulation_id: str) -> None:
+    # Reject anything that doesn't look like a real sim id — prevents the
+    # path-traversal vector where DELETE /simulations/..%2F..%2Fsecret would
+    # cause unlink() on an arbitrary path.
+    if not _SIM_ID_RE.match(simulation_id):
+        return
     artifact_path = run_artifact_path(simulation_id)
     artifact_path.unlink(missing_ok=True)
 
@@ -387,6 +426,7 @@ def run_artifact_path(simulation_id: str, base_dir: Path | None = None) -> Path:
 
 
 def delete_simulation(store: SimulationStore, simulation_id: str) -> DeleteSimulationEnvelope:
+    _validate_id_format(simulation_id, _SIM_ID_RE, "simulation")
     cleanup_simulation_artifacts(simulation_id)
     deleted_rows = store.delete_simulation(simulation_id)
 
@@ -1324,14 +1364,14 @@ def export_simulation_csv(store: SimulationStore, simulation_id: str) -> str:
         rows.append(
             {
                 "persona_id": persona.get("persona_id", ""),
-                "name": persona.get("name", ""),
+                "name": _csv_safe(persona.get("name", "")),
                 "age": persona.get("age", ""),
-                "occupation": persona.get("occupation", ""),
-                "city": persona.get("city", ""),
-                "state": persona.get("state", ""),
+                "occupation": _csv_safe(persona.get("occupation", "")),
+                "city": _csv_safe(persona.get("city", "")),
+                "state": _csv_safe(persona.get("state", "")),
                 "approval": response.get("approval", ""),
-                "emotion": response.get("emotion", ""),
-                "rationale": response.get("rationale", ""),
+                "emotion": _csv_safe(response.get("emotion", "")),
+                "rationale": _csv_safe(response.get("rationale", "")),
                 "behavioral_change": behavior_change_text,
             }
         )

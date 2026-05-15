@@ -7,10 +7,14 @@ import { Box, Text, Group, Stack } from '@mantine/core'
 import { Bot, User } from 'lucide-react'
 
 // Inject keyframes once via a <style> element — avoids any build-tool dependency.
+// Respects prefers-reduced-motion: users who disable motion see static dots.
 const TYPING_KEYFRAMES = `
   @keyframes chatBubbleBounce {
     0%, 80%, 100% { transform: translateY(0); }
     40%           { transform: translateY(-6px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chat-typing-dot { animation: none !important; }
   }
 `
 
@@ -18,10 +22,11 @@ function TypingDots() {
   return (
     <>
       <style>{TYPING_KEYFRAMES}</style>
-      <Group gap={4} align="center" style={{ height: 20, padding: '0 2px' }}>
+      <Group gap={4} align="center" style={{ height: 20, padding: '0 2px' }} aria-label="Gemma is typing">
         {[0, 1, 2].map((i) => (
           <Box
             key={i}
+            className="chat-typing-dot"
             style={{
               width: 7,
               height: 7,

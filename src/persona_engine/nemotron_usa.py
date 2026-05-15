@@ -128,26 +128,55 @@ def _read_with_hf_datasets(dataset_path: str) -> list[dict[str, Any]]:
     return rows
 
 
+# In-memory cache for the parsed dataset. Keyed by (resolved_path, file_mtime_ns)
+# so the cache invalidates automatically if the underlying file is replaced,
+# without forcing a full re-parse on every single /run call. The full Nemotron
+# dataset is ~1M rows / 300-600 MB resident; without this cache, every /run was
+# re-parsing the whole file twice (validation + worker).
+_DATASET_CACHE: dict[tuple[str, int], tuple[list[dict[str, Any]], str]] = {}
+
+
+def _cache_key(path: Path) -> tuple[str, int]:
+    try:
+        return (str(path.resolve()), path.stat().st_mtime_ns)
+    except OSError:
+        # Path doesn't exist yet — cache key won't match anything; loader will
+        # fall through to the HF datasets path and raise the real error.
+        return (str(path), 0)
+
+
 def load_nemotron_usa_rows() -> tuple[list[dict[str, Any]], str]:
     dataset_path = resolve_dataset_path()
+    cache_key = _cache_key(dataset_path)
+    cached = _DATASET_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     if dataset_path.is_file():
         suffix = dataset_path.suffix.lower()
         if suffix == ".csv":
-            return _read_csv(dataset_path), str(dataset_path)
-        if suffix in {".jsonl", ".ndjson"}:
-            return _read_jsonl(dataset_path), str(dataset_path)
-        raise DatasetLoadError(f"unsupported dataset file format: {dataset_path}")
-
-    if dataset_path.is_dir():
+            result = (_read_csv(dataset_path), str(dataset_path))
+        elif suffix in {".jsonl", ".ndjson"}:
+            result = (_read_jsonl(dataset_path), str(dataset_path))
+        else:
+            raise DatasetLoadError(f"unsupported dataset file format: {dataset_path}")
+    elif dataset_path.is_dir():
         csv_files = sorted(dataset_path.rglob("*.csv"))
         if csv_files:
-            return _read_csv(csv_files[0]), str(csv_files[0])
-        jsonl_files = sorted(dataset_path.rglob("*.jsonl")) + sorted(dataset_path.rglob("*.ndjson"))
-        if jsonl_files:
-            return _read_jsonl(jsonl_files[0]), str(jsonl_files[0])
+            result = (_read_csv(csv_files[0]), str(csv_files[0]))
+        else:
+            jsonl_files = sorted(dataset_path.rglob("*.jsonl")) + sorted(dataset_path.rglob("*.ndjson"))
+            if jsonl_files:
+                result = (_read_jsonl(jsonl_files[0]), str(jsonl_files[0]))
+            else:
+                # Fallback to HF datasets loader.
+                result = (_read_with_hf_datasets(str(dataset_path)), str(dataset_path))
+    else:
+        # Fallback to HF datasets loader (supports hub IDs).
+        result = (_read_with_hf_datasets(str(dataset_path)), str(dataset_path))
 
-    # Fallback to HF datasets loader (supports local dataset dirs and hub IDs if available).
-    return _read_with_hf_datasets(str(dataset_path)), str(dataset_path)
+    _DATASET_CACHE[cache_key] = result
+    return result
 
 
 def _coerce_str_list(value: Any) -> list[str] | None:

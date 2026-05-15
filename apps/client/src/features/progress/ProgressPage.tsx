@@ -115,15 +115,17 @@ function EtaCountdown({ seconds }: { seconds: number }) {
     setRemaining(seconds)
   }, [seconds])
 
+  // Single interval that runs for the lifetime of the component. The functional
+  // updater means we don't need `remaining` as a dep, which was previously
+  // tearing down and recreating the interval every second.
   useEffect(() => {
-    if (remaining <= 0) return
     const timer = setInterval(() => setRemaining((s) => Math.max(0, s - 1)), 1000)
     return () => clearInterval(timer)
-  }, [remaining])
+  }, [])
 
   if (remaining <= 0) return null
   return (
-    <Text size="xs" c="var(--color-text-tertiary)">
+    <Text size="xs" c="var(--color-text-tertiary)" role="status" aria-live="polite">
       Estimated time remaining: <b>{formatDuration(remaining)}</b>
     </Text>
   )
@@ -341,7 +343,12 @@ export default function ProgressPage() {
 
             {/* ── Progress bar ──────────────────────────────────── */}
             {!isCompleted && (
-              <Stack gap={6}>
+              <Stack
+                gap={6}
+                role="region"
+                aria-live="polite"
+                aria-label="Simulation progress"
+              >
                 <Group justify="space-between">
                   <Text size="xs" fw={600} c="var(--color-text-secondary)">
                     {formatNumber(d?.agents_completed ?? 0)} / {formatNumber(d?.agents_total ?? 0)} personas
@@ -368,6 +375,11 @@ export default function ProgressPage() {
                   radius="xl"
                   color={isFailed ? 'red' : 'var(--color-accent-primary)'}
                   animated={!isFailed}
+                  aria-label="Simulation progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pct}
+                  aria-valuetext={`${pct.toFixed(1)} percent complete`}
                 />
                 {!isFailed && d && d.estimated_seconds_remaining > 0 && (
                   <EtaCountdown seconds={d.estimated_seconds_remaining} />

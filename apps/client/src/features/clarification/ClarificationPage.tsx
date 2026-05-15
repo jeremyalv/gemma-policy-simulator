@@ -217,6 +217,10 @@ export default function ClarificationPage() {
           {/* Messages */}
           <Box
             ref={scrollRef}
+            role="log"
+            aria-live="polite"
+            aria-atomic="false"
+            aria-label="Clarification conversation"
             style={{
               flex: 1,
               overflowY: 'auto',

@@ -11,7 +11,7 @@
  *  - TanStack Query handles cleanup on unmount automatically
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { getSimulationStatus, type SimulationStatusData } from '@/api'
@@ -36,6 +36,19 @@ export function useStatusPolling({
 }: UseStatusPollingOptions) {
   const navigate = useNavigate()
 
+  // Pause polling while the tab is hidden — saves bandwidth, server load,
+  // and battery. The first focus event after returning will trigger a
+  // refetch via TanStack Query's normal state evaluation.
+  const [isTabVisible, setIsTabVisible] = useState(
+    typeof document === 'undefined' ? true : document.visibilityState !== 'hidden',
+  )
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const onVisibility = () => setIsTabVisible(document.visibilityState !== 'hidden')
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
   const query = useQuery<SimulationStatusData>({
     queryKey: ['simulation-status', simulationId],
     queryFn:  () => getSimulationStatus(simulationId),
@@ -48,6 +61,8 @@ export function useStatusPolling({
       const status = q.state.data?.status
       // Stop on terminal state
       if (status === 'completed' || status === 'failed') return false
+      // Pause polling while the tab is hidden
+      if (!isTabVisible) return false
       // Stop only for genuine not-found — everything else auto-recovers
       const err = q.state.error
       if (err instanceof ApiError && err.httpStatus === 404) return false

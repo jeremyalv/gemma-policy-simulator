@@ -75,6 +75,7 @@ export function AppHeader() {
                 component={Link}
                 to={to}
                 size="sm"
+                aria-current={active ? 'page' : undefined}
                 style={{
                   color: active
                     ? 'var(--color-accent-primary)'
