@@ -3,8 +3,39 @@
  * Two variants: 'gemma' (left-aligned, green) and 'user' (right-aligned, neutral).
  */
 
-import { Box, Text, Group, Stack, Skeleton } from '@mantine/core'
+import { Box, Text, Group, Stack } from '@mantine/core'
 import { Bot, User } from 'lucide-react'
+
+// Inject keyframes once via a <style> element — avoids any build-tool dependency.
+const TYPING_KEYFRAMES = `
+  @keyframes chatBubbleBounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40%           { transform: translateY(-6px); }
+  }
+`
+
+function TypingDots() {
+  return (
+    <>
+      <style>{TYPING_KEYFRAMES}</style>
+      <Group gap={4} align="center" style={{ height: 20, padding: '0 2px' }}>
+        {[0, 1, 2].map((i) => (
+          <Box
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              backgroundColor: 'var(--color-accent-primary)',
+              animation: 'chatBubbleBounce 1.2s ease-in-out infinite',
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
+      </Group>
+    </>
+  )
+}
 
 type BubbleRole = 'gemma' | 'user'
 
@@ -54,11 +85,17 @@ export function ChatBubble({ role, children, caption, isLoading }: ChatBubblePro
     return (
       <Group align="flex-start" gap="sm" justify={isGemma ? 'flex-start' : 'flex-end'}>
         {isGemma && <Avatar role="gemma" />}
-        <Stack gap={6} style={{ maxWidth: '72%' }}>
-          <Skeleton height={14} width="80%" radius="sm" />
-          <Skeleton height={14} width="60%" radius="sm" />
-          <Skeleton height={14} width="40%" radius="sm" />
-        </Stack>
+        <Box
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border-subtle)',
+            borderRadius: '2px 12px 12px 12px',
+            padding: '8px 14px',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <TypingDots />
+        </Box>
         {!isGemma && <Avatar role="user" />}
       </Group>
     )

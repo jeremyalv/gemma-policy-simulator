@@ -193,6 +193,8 @@ export function SampleSection({ form }: SampleSectionProps) {
             label: {
               color: 'var(--color-text-secondary)',
               padding: '6px 8px',
+              // White text when the label sits on the active (green) indicator
+              '&[data-active]': { color: '#fff' },
             },
             control: {
               border: 'none',
