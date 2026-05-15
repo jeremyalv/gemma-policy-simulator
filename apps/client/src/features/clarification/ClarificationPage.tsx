@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   Box, Text, Group, Button, Textarea, Stack,
   Alert, ActionIcon, Tooltip, Progress,
@@ -35,14 +35,16 @@ const GENERATE_FOCUS = 'policy eligibility, mechanism, and expected outcomes'
 export default function ClarificationPage() {
   const { id: simulationId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const [answer, setAnswer] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // ── Placeholder policy data (real data from store/location state in future) ─
-  // In practice this should come from the simulation draft — for now we use
-  // location state or fall back to generic placeholder.
-  const locationState = (window.history.state?.usr ?? {}) as {
+  // ── Policy data from React Router location state ──────────────────────────
+  // Passed by useCreateSimulation.onSuccess when navigating here.
+  // Falls back to placeholders on hard-refresh (state is lost) — not a crash,
+  // just a cosmetic degradation of the policy panel display.
+  const locationState = (location.state ?? {}) as {
     title?: string
     policy_text?: string
     runtime_profile?: string
@@ -90,7 +92,7 @@ export default function ClarificationPage() {
         { use_refined_prompt: useRefined, profile: runtimeProfile },
         generateIdempotencyKey(),
       )
-      navigate(`/simulations/${simulationId}`)
+      navigate(`/simulations/${simulationId}`, { state: { title: policyTitle } })
     } catch (err) {
       notifications.show({
         title: 'Run failed',

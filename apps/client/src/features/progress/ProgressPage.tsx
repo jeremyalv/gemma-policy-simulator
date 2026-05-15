@@ -148,7 +148,9 @@ export default function ProgressPage() {
     setIsRetrying(true)
     try {
       await runSimulation(simulationId, {}, generateIdempotencyKey())
-      // Polling will pick up the new 'running' status automatically
+      // Restart polling: manual refetch triggers TanStack Query to re-evaluate
+      // refetchInterval — the new 'running' status resumes the 2.5 s poll cycle.
+      refetch()
     } catch (err) {
       const is409 = err instanceof ApiError && err.httpStatus === 409
       notifications.show({

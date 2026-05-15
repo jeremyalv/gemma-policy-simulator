@@ -521,19 +521,16 @@ def answer_clarification_question(
     persisted_current_clarification_id: str | None = None
 
     if final_status == "in_progress":
-        if current_turn_index >= MAX_CLARIFICATION_TURNS:
-            final_status = "resolved"
-        else:
-            if next_question_text is None:
-                raise ApiError(
-                    code="MODEL_RUNTIME_ERROR",
-                    message="model output missing next_question_text for in_progress clarification",
-                    status_code=500,
-                )
-            next_clarification_id = new_clarification_id()
-            response_next_question_text = next_question_text
-            persisted_turn_index = current_turn_index + 1
-            persisted_current_clarification_id = next_clarification_id
+        if next_question_text is None:
+            raise ApiError(
+                code="MODEL_RUNTIME_ERROR",
+                message="model output missing next_question_text for in_progress clarification",
+                status_code=500,
+            )
+        next_clarification_id = new_clarification_id()
+        response_next_question_text = next_question_text
+        persisted_turn_index = current_turn_index + 1
+        persisted_current_clarification_id = next_clarification_id
 
     store.update_refined_prompt_and_clarification_state(
         simulation_id=simulation_id,
@@ -663,10 +660,21 @@ def run_simulation(
             filters=filters if isinstance(filters, dict) else None,
         )
     except DatasetLoadError as exc:
+        msg = str(exc)
+        # "insufficient personas after filters" is a client-driven 409 (bad filter params).
+        # All other DatasetLoadErrors (missing file, invalid format, HF load failure)
+        # are server configuration errors — return 500 so clients don't treat them
+        # as retryable filter conflicts.
+        if "insufficient personas" in msg.lower():
+            raise ApiError(
+                code="INSUFFICIENT_DATASET_SAMPLE",
+                message=msg,
+                status_code=409,
+            ) from exc
         raise ApiError(
-            code="INSUFFICIENT_DATASET_SAMPLE",
-            message=str(exc),
-            status_code=409,
+            code="DATASET_ERROR",
+            message=f"dataset unavailable: {msg}",
+            status_code=500,
         ) from exc
 
     use_refined_prompt = cast(bool, request_body.get("use_refined_prompt", True))
@@ -831,6 +839,9 @@ def execute_simulation_run(*, db_path: Path, simulation_id: str) -> None:
         }
         run_artifact_path(simulation_id).write_text(json.dumps(artifact, ensure_ascii=True), encoding="utf-8")
 
+        # DB transition — if this raises after the artifact is already written,
+        # the outer except block will catch it and call fail_simulation_run, which
+        # prevents the simulation from being permanently stuck in "running".
         if completed:
             mean_approval = sum(float(item["response"]["approval"]) for item in outputs) / len(outputs)
             store.complete_simulation_run(

@@ -42,7 +42,7 @@ export type ApiErrorCode =
   | 'LIFECYCLE_CONFLICT'
   | 'SIMULATION_NOT_COMPLETE'
   | 'SIMULATION_FAILED'
-  | 'INFERENCE_ERROR'
+  | 'MODEL_RUNTIME_ERROR'
   | string // allow unknown codes gracefully
 
 export class ApiError extends Error {

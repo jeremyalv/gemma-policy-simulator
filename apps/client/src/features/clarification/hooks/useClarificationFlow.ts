@@ -116,21 +116,26 @@ export function useClarificationFlow({
           answer,
         )
 
-        // Archive this turn
+        // Archive this turn.
+        // Use functional update to avoid stale closure if the component
+        // somehow fires submitAnswer twice before React commits the state.
         const completedTurn: QATurn = {
           question: currentQuestion,
           answer,
           refinedPolicyText: result.refined_policy_text,
         }
-        const newTurns = [...turns, completedTurn]
-        setTurns(newTurns)
+        setTurns(prev => [...prev, completedTurn])
         setRefinedPolicyText(result.refined_policy_text)
         setCurrentQuestion(null)
+
+        // turns is stale here (React batches state), so compute the new
+        // length from the known-at-call-time value + 1.
+        const newTurnCount = turns.length + 1
 
         // Decide next step
         const isDone =
           result.clarification_status === 'resolved' ||
-          newTurns.length >= MAX_TURNS ||
+          newTurnCount >= MAX_TURNS ||
           !result.next_clarification_id
 
         if (isDone) {
@@ -144,7 +149,7 @@ export function useClarificationFlow({
             question_text: result.next_question_text ?? '',
             rationale: '',
             status: 'open',
-            turn_index: newTurns.length + 1,
+            turn_index: newTurnCount + 1,
           }
           setCurrentQuestion(nextQ)
           setState('waiting_answer')

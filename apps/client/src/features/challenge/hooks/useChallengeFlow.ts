@@ -94,7 +94,8 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
 
   // ── Start challenge ───────────────────────────────────────────────────────
   const startChallenge = useCallback(async () => {
-    if (!selectedFocus) return
+    // Guard: only allow one in-flight request — prevents double-submit race
+    if (!selectedFocus || state !== 'picking') return
     setState('loading_challenge')
     setError(null)
 
@@ -106,11 +107,12 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setError(challengeErrorMessage(err, 'Failed to generate challenge.'))
       setState('error')
     }
-  }, [simulationId, selectedFocus])
+  }, [simulationId, selectedFocus, state])
 
   // ── Submit response ───────────────────────────────────────────────────────
   const submitResponse = useCallback(async (response: string) => {
-    if (!challenge) return
+    // Guard: only allow one in-flight request — prevents double-submit race
+    if (!challenge || state !== 'challenging') return
     setState('submitting')
     setError(null)
 
@@ -126,7 +128,7 @@ export function useChallengeFlow({ simulationId }: UseChallengeFlowOptions): Use
       setError(challengeErrorMessage(err, 'Failed to submit response.'))
       setState('error')
     }
-  }, [challenge, simulationId])
+  }, [challenge, simulationId, state])
 
   // ── Challenge again ───────────────────────────────────────────────────────
   const challengeAgain = useCallback(() => {
