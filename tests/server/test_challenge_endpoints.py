@@ -49,7 +49,7 @@ def _write_completed_artifact(simulation_id: str) -> None:
         json.dumps(
             {
                 "simulation_id": simulation_id,
-                "model": "gemma4:e2b",
+                "model": "gemma4:e4b",
                 "output_count": 3,
                 "raw_outputs": [
                     {

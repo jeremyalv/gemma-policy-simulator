@@ -15,6 +15,8 @@ DEFAULT_MODEL = "gemma"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_MAX_RETRIES = 1
+DEFAULT_TEMPERATURE = 0.2
+DEFAULT_TOP_P = 0.9
 PROMPT_TEMPLATE_VERSION = "run_calibrated_v1"
 
 STATES = ["CA", "TX", "FL", "NY", "WA", "IL", "PA", "OH"]
@@ -107,6 +109,32 @@ def resolve_max_retries() -> int:
     return max(0, parsed)
 
 
+def _clamp_float(value: float, *, min_value: float, max_value: float) -> float:
+    return max(min_value, min(max_value, value))
+
+
+def resolve_run_temperature() -> float:
+    raw = os.getenv("SIMS_RUN_TEMPERATURE")
+    if raw is None:
+        return DEFAULT_TEMPERATURE
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return DEFAULT_TEMPERATURE
+    return _clamp_float(parsed, min_value=0.0, max_value=2.0)
+
+
+def resolve_run_top_p() -> float:
+    raw = os.getenv("SIMS_RUN_TOP_P")
+    if raw is None:
+        return DEFAULT_TOP_P
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return DEFAULT_TOP_P
+    return _clamp_float(parsed, min_value=0.0, max_value=1.0)
+
+
 def _seed_for_simulation(simulation_id: str) -> int:
     digest = hashlib.sha256(simulation_id.encode("utf-8")).hexdigest()
     return int(digest[:16], 16)
@@ -175,6 +203,7 @@ def build_policy_prompt(*, policy_text: str, persona: dict[str, Any]) -> str:
     return (
         "You are a synthetic policy simulation respondent and neutral evaluator.\n"
         "Evaluate the policy using the persona context. Do not assume the policy is good by default.\n"
+        "First, identify the strongest reasons this policy could fail for this persona.\n"
         "Before choosing approval, internally assess:\n"
         "- benefits\n"
         "- costs\n"
@@ -188,6 +217,10 @@ def build_policy_prompt(*, policy_text: str, persona: dict[str, Any]) -> str:
         "- 4: support with reservations/conditions\n"
         "- 5: strong support, benefits clearly outweigh risks\n"
         "Do not default to 4 or 5 unless your rationale explicitly addresses risks and tradeoffs for this persona.\n"
+        "If uncertainty is high or tradeoffs are balanced, choose 3 instead of inflating approval.\n"
+        "Base the score on policy substance and persona interests, not promotional tone in policy wording.\n"
+        "In rationale, include at least one concrete upside and one concrete downside tied to this persona.\n"
+        "If both upside and downside are material, prefer score 3 unless one side clearly dominates.\n"
         "Return strictly valid JSON with these keys:\n"
         "- approval (integer 1-5)\n"
         "- emotion (string)\n"
@@ -208,6 +241,10 @@ def _call_ollama(prompt: str) -> dict[str, Any]:
         "prompt": prompt,
         "format": "json",
         "stream": False,
+        "options": {
+            "temperature": resolve_run_temperature(),
+            "top_p": resolve_run_top_p(),
+        },
     }
     req = request.Request(
         url=f"{_ollama_base_url()}/api/generate",

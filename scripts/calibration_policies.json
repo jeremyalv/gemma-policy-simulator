@@ -1,0 +1,22 @@
+[
+  {
+    "key": "assault_buyback",
+    "title": "Nationwide Assault Weapons Buyback Act (US)",
+    "policy_text": "The federal government will require mandatory surrender of designated assault-style rifles within 12 months. Owners receive compensation at a fixed schedule funded by a national excise tax. Non-compliance carries criminal penalties. Local law enforcement may conduct compliance checks."
+  },
+  {
+    "key": "federal_austerity",
+    "title": "Federal Austerity and Benefit Reduction Act (US)",
+    "policy_text": "To reduce the deficit, this policy cuts federal social spending by 20% across food assistance, housing vouchers, and unemployment benefits over two years, while freezing inflation adjustments. States are expected to fill gaps using local revenue."
+  },
+  {
+    "key": "national_everify",
+    "title": "National E-Verify + Legalization Pathway (US)",
+    "policy_text": "All employers must use mandatory E-Verify for new and existing workers, with substantial penalties for violations. In parallel, undocumented residents with 5+ years presence can apply for legal status after background checks, fees, and tax compliance milestones."
+  },
+  {
+    "key": "carbon_dividend",
+    "title": "Federal Carbon Tax with Household Dividend (US)",
+    "policy_text": "A national carbon tax starts at $60/ton and rises annually. Revenue is returned as equal monthly household dividends, while energy-intensive sectors receive temporary transition rebates. The policy targets emissions reduction and long-term climate resilience."
+  }
+]

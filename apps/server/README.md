@@ -39,13 +39,13 @@ ollama serve
 In another terminal, pull your model:
 
 ```bash
-ollama pull gemma4:e2b
+ollama pull gemma4:e4b
 ```
 
 Quick sanity check:
 
 ```bash
-ollama run gemma4:e2b "Reply with: ollama ok"
+ollama run gemma4:e4b "Reply with: ollama ok"
 ```
 
 ### 3. Configure backend environment
@@ -54,10 +54,12 @@ Create `.env` at repo root:
 
 ```env
 SIMS_OLLAMA_BASE_URL=http://localhost:11434
-SIMS_RUN_MODEL=gemma4:e2b
+SIMS_RUN_MODEL=gemma4:e4b
 SIMS_RUN_TIMEOUT_SECONDS=60
 SIMS_RUN_BATCH_SIZE=8
 SIMS_RUN_MAX_RETRIES=1
+SIMS_RUN_TEMPERATURE=0.2
+SIMS_RUN_TOP_P=0.9
 
 SIMS_DATASET_NEMOTRON_PATH=data/nemotron_usa/nemotron_usa.jsonl
 SIMS_DATASET_NEMOTRON_VERSION=Nemotron-Personas-USA
@@ -67,9 +69,11 @@ Notes:
 - `SIMS_DATASET_NEMOTRON_PATH` should point to your local Nemotron USA dataset file/folder.
 - Recommended local format today: `.jsonl`.
 - Backward-compatible aliases are also accepted:
-  - `SIMS_OLLAMA_MODEL` -> `SIMS_RUN_MODEL`
-  - `SIMS_OLLAMA_TIMEOUT_SECONDS` -> `SIMS_RUN_TIMEOUT_SECONDS`
-  - `SIMS_BATCH_SIZE` -> `SIMS_RUN_BATCH_SIZE`
+- `SIMS_OLLAMA_MODEL` -> `SIMS_RUN_MODEL`
+- `SIMS_OLLAMA_TIMEOUT_SECONDS` -> `SIMS_RUN_TIMEOUT_SECONDS`
+- `SIMS_BATCH_SIZE` -> `SIMS_RUN_BATCH_SIZE`
+- `SIMS_RUN_TEMPERATURE` controls score variability (0.0..2.0, default `0.2`)
+- `SIMS_RUN_TOP_P` controls token diversity (0.0..1.0, default `0.9`)
 
 ### 4. Start backend server
 
@@ -135,3 +139,34 @@ Expected signal:
 - Approval distribution should typically span at least 3 score buckets.
 - Means should not be uniformly pinned at 4.5+ across all controversial cases.
 - Representative rationales should include both benefits and risks.
+
+## Calibration Harness (Matrix + Dispersion Report)
+
+Run a practical matrix benchmark and generate summary outputs (`summary.csv`, `summary.md`):
+
+```bash
+./scripts/calibration_matrix.sh
+```
+
+Useful overrides:
+
+```bash
+BASE_URL=http://localhost:8000 \
+DB_PATH=apps/server/data/sims.db \
+SAMPLE_SIZE=100 \
+SEED_LABELS=101,202 \
+./scripts/calibration_matrix.sh
+```
+
+This creates a run directory under `/tmp/infinipol-calibration/run-<timestamp>/` with:
+- per-run `*_status.json`, `*_results.json`, `*_meta.json`
+- aggregated `summary.csv` and `summary.md`
+
+To re-analyze an existing run directory:
+
+```bash
+python3 scripts/analyze_calibration.py /tmp/infinipol-calibration/run-<timestamp>
+```
+
+Acceptance target for controversial-policy calibration:
+- `>=3` nonzero approval buckets in at least `70%` of completed runs.
