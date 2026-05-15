@@ -51,8 +51,9 @@ function FormSection({
   children: React.ReactNode
 }) {
   return (
-    <Box>
-      <Text
+    <Box component="section">
+      <Title
+        order={3}
         fw={600}
         size="sm"
         c="var(--color-text-primary)"
@@ -60,7 +61,7 @@ function FormSection({
         style={{ letterSpacing: '-0.01em' }}
       >
         {title}
-      </Text>
+      </Title>
       {subtitle && (
         <Text size="xs" c="var(--color-text-tertiary)" mb={12} lh={1.5}>
           {subtitle}

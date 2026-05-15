@@ -17,8 +17,17 @@ class SimulationStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.db_path)
+        # `isolation_level=None` + manual BEGIN gives us autocommit-like behavior
+        # without losing the ability to wrap multi-statement transactions when
+        # needed. WAL journal mode lets readers (status polling) not block while
+        # the worker is writing per-persona progress updates.
+        connection = sqlite3.connect(self.db_path, timeout=30.0)
         connection.row_factory = sqlite3.Row
+        # Apply pragmas every connect — WAL persists in the file header so this
+        # is idempotent and cheap.
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA synchronous=NORMAL")
+        connection.execute("PRAGMA busy_timeout=30000")
         return connection
 
     def ensure_schema(self) -> None:

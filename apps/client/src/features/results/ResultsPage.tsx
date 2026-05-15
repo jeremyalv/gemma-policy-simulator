@@ -42,6 +42,7 @@ function SectionCard({
 }) {
   return (
     <Box
+      component="section"
       className={className}
       style={{
         border: '1px solid var(--color-border-subtle)',
@@ -52,7 +53,8 @@ function SectionCard({
       }}
     >
       <Box mb={subtitle ? 4 : 20} pb={subtitle ? 0 : 16} style={{ borderBottom: subtitle ? 'none' : '1px solid var(--color-border-subtle)' }}>
-        <Text
+        <Title
+          order={3}
           fw={700}
           style={{
             fontSize: 13,
@@ -61,7 +63,7 @@ function SectionCard({
           }}
         >
           {title}
-        </Text>
+        </Title>
       </Box>
       {subtitle && (
         <Text size="xs" c="var(--color-text-tertiary)" mb={16} mt={4} lh={1.55}>{subtitle}</Text>
