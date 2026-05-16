@@ -1,4 +1,4 @@
-# InfiliPol — Honest Product Plan v2
+# InfiniPol — Honest Product Plan v2
 **Scope: US Policy (primary) + Global English-language policies (secondary)**
 **Last updated: 2026-04-27**
 
@@ -551,7 +551,7 @@ The `listSimulations` function uses raw `fetch()` instead of `apiFetch`. Add a c
 
 ## 10. Summary: The Honest Version of This Product
 
-InfiliPol has a genuinely useful core idea: use AI to rapidly prototype public reaction to policy proposals, surface demographic fault lines, and identify framing risks — faster than commissioning survey fieldwork.
+InfiniPol has a genuinely useful core idea: use AI to rapidly prototype public reaction to policy proposals, surface demographic fault lines, and identify framing risks — faster than commissioning survey fieldwork.
 
 That is a real workflow gap. Policy teams, think tanks, and academic researchers do spend significant time and money on exactly this kind of pre-publication reaction testing. An AI tool that makes it faster and cheaper has clear market fit.
 

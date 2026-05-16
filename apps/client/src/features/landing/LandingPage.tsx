@@ -4,7 +4,7 @@
  * interactive "Try It" simulator, use-case cards, stagger reveals.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, cloneElement, isValidElement } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Box, Group, Text, Button, SimpleGrid, Stack,
@@ -91,6 +91,35 @@ const ANIM_CSS = `
   .lp-feature-card:hover {
     transform: translateY(-5px) !important;
     box-shadow: 0 18px 36px -8px rgba(0,0,0,0.13) !important;
+  }
+
+  /* Editorial feature row (v4 redesign) */
+  .lp-feature-row:hover { background-color: var(--color-bg-subtle); }
+  .lp-feature-row:hover .lp-feature-index { color: var(--color-accent-primary); }
+
+  /* Persona tab (v4 redesign) */
+  .lp-persona-tab {
+    cursor: pointer;
+    padding: 14px 0;
+    margin-right: 32px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 180ms, color 180ms;
+    background: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+  }
+  .lp-persona-tab[data-active="true"] {
+    border-bottom-color: var(--color-accent-primary);
+    color: var(--color-text-primary);
+  }
+  .lp-persona-tab:hover { color: var(--color-text-secondary); }
+  .lp-persona-tab[data-active="true"]:hover { color: var(--color-text-primary); }
+
+  @keyframes lp-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .lp-feature-icon {
     transition: transform 210ms ease;
@@ -934,29 +963,59 @@ function FeaturesSection() {
   const ref = useRef<HTMLDivElement>(null)
   const visible = useInView(ref, 0.05)
   return (
-    <Box py={80} style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <Box py={96} style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <Container size="lg">
-        <Stack gap={48}>
-          <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
-            <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              Everything you need to pressure-test a policy
+        {/* Two-column section header: eyebrow + serif H2 left, subtitle right */}
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} mb={64} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+          <Stack gap={14}>
+            <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+              01 — Capabilities
             </Text>
-            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
-              InfiniPol gives policy analysts, researchers, and advocates a complete toolkit
-              for understanding public response, before the policy goes live.
+            <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+              Pressure-test a policy<br/>before you publish it.
             </Text>
           </Stack>
-          <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-            {FEATURES.map((f, i) => (
-              <Box key={f.title} className={`lp-reveal lp-feature-card ${visible ? 'lp-visible' : ''}`} style={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border-subtle)', borderRadius: 12, padding: '24px', transitionDelay: visible ? `${i * 70}ms` : '0ms' }}>
-                <Box className="lp-feature-icon" style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: `${f.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, color: f.color }}>
-                  {f.icon}
+          <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+            Six tools, one workflow. Built around the analytical steps a policy
+            team actually takes — not a feature checklist.
+          </Text>
+        </SimpleGrid>
+
+        {/* Editorial list — 3-column grid per row, hairline separators */}
+        <Stack gap={0} ref={ref}>
+          {FEATURES.map((f, i) => (
+            <Box
+              key={f.title}
+              className="lp-feature-row"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(60px, 80px) minmax(0, 1fr) minmax(0, 1.4fr)',
+                gap: 32,
+                alignItems: 'start',
+                padding: '32px 0',
+                borderTop: '1px solid var(--color-border-subtle)',
+                borderBottom: i === FEATURES.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
+                transition: 'background-color 180ms ease',
+              }}
+            >
+              <Text className="lp-feature-index" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 28, fontWeight: 400, color: 'var(--color-text-tertiary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                {String(i + 1).padStart(2, '0')}
+              </Text>
+              <Group gap={10} align="center" wrap="nowrap">
+                <Box style={{ color: 'var(--color-text-tertiary)', display: 'flex', flexShrink: 0 }} aria-hidden="true">
+                  {isValidElement(f.icon)
+                    ? cloneElement(f.icon as React.ReactElement<{ size?: number; strokeWidth?: number }>, { size: 14, strokeWidth: 1.75 })
+                    : f.icon}
                 </Box>
-                <Text fw={700} size="sm" mb={8} c="var(--color-text-primary)">{f.title}</Text>
-                <Text size="sm" c="var(--color-text-secondary)" lh={1.65}>{f.description}</Text>
-              </Box>
-            ))}
-          </SimpleGrid>
+                <Text style={{ fontFamily: 'Source Serif 4, serif', fontSize: 19, fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+                  {f.title}
+                </Text>
+              </Group>
+              <Text style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: '52ch' }}>
+                {f.description}
+              </Text>
+            </Box>
+          ))}
         </Stack>
       </Container>
     </Box>
@@ -968,50 +1027,98 @@ function FeaturesSection() {
 function UseCasesSection() {
   const ref = useRef<HTMLDivElement>(null)
   const visible = useInView(ref, 0.1)
+  const [active, setActive] = useState(0)
+  const u = USE_CASES[active]
+  // Strip wrapping quotes if present — we present the line as a pull-statement, not a quote
+  const statement = u.quote.replace(/^["']|["']$/g, '')
+
+  // Per-persona working details. Pulled from the persona's narrative rather than
+  // invented; designed so each persona has a distinct workflow + outcome.
+  const detailsByRole: Record<string, { workflow: string; outcome: string }> = {
+    'Policy Analyst': {
+      workflow: 'Draft → segment by state and age → run → compare framings → iterate in one session.',
+      outcome: 'Surface the framing that lifts approval the most before leadership sees the proposal.',
+    },
+    'Academic Researcher': {
+      workflow: 'Hypothesis → AI-stratified pre-study → identify which segments warrant fieldwork.',
+      outcome: 'Cut wasted survey spend on segments where AI already shows clear directional signal.',
+    },
+    'Campaign Strategist': {
+      workflow: 'Platform item → demographic breakdown → message test by region → outreach plan.',
+      outcome: 'Know which segments are flippable on a given item — and what changes their mind.',
+    },
+  }
+  const d = detailsByRole[u.role] ?? { workflow: u.detail, outcome: u.detail }
+
   return (
-    <Box py={80} style={{ backgroundColor: 'var(--color-bg-base)', borderTop: '1px solid var(--color-border-subtle)' }}>
+    <Box py={96} ref={ref} style={{ backgroundColor: 'var(--color-bg-surface)', borderTop: '1px solid var(--color-border-subtle)', borderBottom: '1px solid var(--color-border-subtle)' }}>
       <Container size="lg">
-        <Stack gap={48}>
-          <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
-            <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              Built for every policy professional
+        {/* Two-column section header */}
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} mb={48} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+          <Stack gap={14}>
+            <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+              02 — Who it's for
             </Text>
-            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
-              Whether you're testing a single proposal or running dozens of variants,
-              InfiniPol fits into your workflow.
+            <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+              Built for every<br/>policy professional.
             </Text>
           </Stack>
-          <SimpleGrid ref={ref} cols={{ base: 1, sm: 3 }} spacing="lg">
-            {USE_CASES.map((u, i) => (
-              <Box
+          <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+            One proposal or fifty variants. Government analyst, academic, or
+            campaign strategist — the workflow scales to the question you're asking.
+          </Text>
+        </SimpleGrid>
+
+        {/* Role tabs */}
+        <Group gap={0} wrap="nowrap" role="tablist" aria-label="Policy professional roles" style={{ overflowX: 'auto' }}>
+          {USE_CASES.map((p, i) => (
+            <button
+              key={p.role}
+              type="button"
+              role="tab"
+              aria-selected={active === i}
+              data-active={active === i}
+              onClick={() => setActive(i)}
+              className="lp-persona-tab"
+            >
+              {p.role}
+            </button>
+          ))}
+        </Group>
+
+        {/* Active persona panel */}
+        <Box style={{ borderTop: '1px solid var(--color-border-default)', paddingTop: 48, marginTop: -2 }}>
+          <SimpleGrid cols={{ base: 1, md: 12 }} spacing={48}>
+            <Box style={{ gridColumn: 'span 5' }}>
+              <Text
                 key={u.role}
-                className={`lp-reveal lp-usecase ${visible ? 'lp-visible' : ''}`}
                 style={{
-                  backgroundColor: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-border-subtle)',
-                  borderRadius: 14,
-                  padding: '28px 24px',
-                  transitionDelay: visible ? `${i * 90}ms` : '0ms',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  fontFamily: 'Source Serif 4, serif',
+                  fontSize: 'clamp(20px, 2.4vw, 28px)',
+                  fontWeight: 400,
+                  lineHeight: 1.3,
+                  color: 'var(--color-text-primary)',
+                  letterSpacing: '-0.01em',
+                  animation: 'lp-fade-in 220ms ease both',
                 }}
               >
-                {/* Accent top stripe */}
-                <Box style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: u.color, borderRadius: '14px 14px 0 0' }} />
-                <Box style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: `${u.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, color: u.color }}>
-                  {u.icon}
-                </Box>
-                <Badge size="sm" mb={12} style={{ backgroundColor: `${u.color}15`, color: u.color, border: `1px solid ${u.color}30`, fontWeight: 600 }}>
-                  {u.role}
-                </Badge>
-                <Text size="sm" fw={600} c="var(--color-text-primary)" lh={1.55} mb={10} style={{ fontStyle: 'italic' }}>
-                  {u.quote}
-                </Text>
-                <Text size="sm" c="var(--color-text-secondary)" lh={1.65}>{u.detail}</Text>
-              </Box>
-            ))}
+                {statement}
+              </Text>
+            </Box>
+            <Stack gap={28} style={{ gridColumn: 'span 7' }} key={u.role + '-detail'}>
+              {[
+                { k: 'What they do', v: u.detail },
+                { k: 'Typical workflow', v: d.workflow },
+                { k: 'What changes', v: d.outcome },
+              ].map(({ k, v }) => (
+                <Stack key={k} gap={6}>
+                  <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>{k}</Text>
+                  <Text style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--color-text-secondary)', animation: 'lp-fade-in 220ms ease both' }}>{v}</Text>
+                </Stack>
+              ))}
+            </Stack>
           </SimpleGrid>
-        </Stack>
+        </Box>
       </Container>
     </Box>
   )
@@ -1434,46 +1541,82 @@ function ForecastedImpactSection() {
       <Container size="lg">
         <Stack gap={60}>
 
-          {/* Impact metrics */}
-          <Stack gap={40} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
-            <Stack align="center" gap="sm" style={{ textAlign: 'center' }}>
-              <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-                What InfiliPol does today
+          {/* Impact metrics — full-width strip, no boxes, single accent */}
+          <Stack gap={56} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48}>
+              <Stack gap={14}>
+                <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+                  03 — Today
+                </Text>
+                <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+                  What InfiniPol<br/>does today.
+                </Text>
+              </Stack>
+              <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+                Concrete capabilities, not projections. Every number below is a
+                real product characteristic.
               </Text>
-              <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 500 }}>
-                Concrete capabilities, not projections. Every number below is a real product characteristic.
-              </Text>
-            </Stack>
-            <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
+            </SimpleGrid>
+
+            <Box
+              ref={ref}
+              style={{
+                borderTop: '1px solid var(--color-border-default)',
+                borderBottom: '1px solid var(--color-border-default)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              }}
+            >
               {IMPACT_METRICS.map((m, i) => (
                 <Box
                   key={m.label}
-                  className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
                   style={{
-                    backgroundColor: 'var(--color-bg-base)',
-                    border: '1px solid var(--color-border-subtle)',
-                    borderTop: `3px solid ${m.color}`,
-                    borderRadius: 12,
-                    padding: '24px 20px',
-                    transitionDelay: visible ? `${i * 70}ms` : '0ms',
+                    padding: '40px 28px',
+                    borderLeft: i === 0 ? 'none' : '1px solid var(--color-border-subtle)',
                   }}
                 >
-                  <Box style={{ color: m.color, marginBottom: 12 }}>{m.icon}</Box>
-                  <Text fw={800} style={{ fontSize: '2rem', color: m.color, lineHeight: 1, fontFamily: 'Source Serif 4, serif', marginBottom: 8 }}>
+                  <Box
+                    aria-hidden="true"
+                    style={{ width: 24, height: 2, backgroundColor: 'var(--color-accent-primary)', marginBottom: 24 }}
+                  />
+                  <Text
+                    style={{
+                      fontFamily: 'Source Serif 4, serif',
+                      fontSize: 'clamp(2.4rem, 4.5vw, 3.4rem)',
+                      fontWeight: 400,
+                      lineHeight: 1,
+                      letterSpacing: '-0.03em',
+                      color: 'var(--color-text-primary)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
                     {m.value}
                   </Text>
-                  <Text size="sm" fw={600} c="var(--color-text-primary)" lh={1.4} mb={4}>{m.label}</Text>
-                  <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>{m.sub}</Text>
+                  <Text
+                    style={{
+                      marginTop: 20,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {m.label}
+                  </Text>
+                  <Text style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.55, color: 'var(--color-text-secondary)' }}>
+                    {m.sub}
+                  </Text>
                 </Box>
               ))}
-            </SimpleGrid>
+            </Box>
           </Stack>
 
           {/* Potential applications */}
           <Stack gap={32}>
             <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
               <Text fw={700} style={{ fontSize: '1.6rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-                How teams use InfiliPol
+                How teams use InfiniPol
               </Text>
               <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
                 AI-assisted analysis works best as an early-stage thinking tool, before fieldwork, before publication, before announcement.

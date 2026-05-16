@@ -137,7 +137,7 @@ export default function MethodologyPage() {
           <Section title="What InfiniPol is not">
             <Stack gap="sm">
               <Bullet icon={<AlertTriangle size={15} />} color="var(--color-status-warning)">
-                <strong>Not a survey or polling tool.</strong> InfiliPol does not collect responses
+                <strong>Not a survey or polling tool.</strong> InfiniPol does not collect responses
                 from real people. All personas and reactions are AI-generated. Results cannot be
                 cited as public opinion data.
               </Bullet>
