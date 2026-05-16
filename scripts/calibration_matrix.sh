@@ -7,8 +7,25 @@ POLICIES_FILE="${POLICIES_FILE:-scripts/calibration_policies.json}"
 OUTPUT_DIR="${OUTPUT_DIR:-/tmp/infinipol-calibration}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-100}"
 SEED_LABELS="${SEED_LABELS:-101,202}"
+POLICY_KEYS="${POLICY_KEYS:-}"
 POLL_SECONDS="${POLL_SECONDS:-2}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-900}"
+QUICK_MODE="${QUICK_MODE:-0}"
+
+if [[ "$QUICK_MODE" == "1" || "$QUICK_MODE" == "true" ]]; then
+  if ! printenv SAMPLE_SIZE >/dev/null; then
+    SAMPLE_SIZE="40"
+  fi
+  if ! printenv POLICY_KEYS >/dev/null; then
+    POLICY_KEYS="federal_austerity,carbon_dividend"
+  fi
+  if ! printenv SEED_LABELS >/dev/null; then
+    SEED_LABELS="101,202"
+  fi
+  if ! printenv TIMEOUT_SECONDS >/dev/null; then
+    TIMEOUT_SECONDS="480"
+  fi
+fi
 
 mkdir -p "$OUTPUT_DIR"
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
@@ -21,8 +38,10 @@ echo "[calibration] policies_file=$POLICIES_FILE"
 echo "[calibration] run_dir=$RUN_DIR"
 echo "[calibration] sample_size=$SAMPLE_SIZE"
 echo "[calibration] seed_labels=$SEED_LABELS"
+echo "[calibration] policy_keys=${POLICY_KEYS:-<all>}"
+echo "[calibration] quick_mode=$QUICK_MODE"
 
-python3 - <<'PY' "$POLICIES_FILE" "$DB_PATH" "$SAMPLE_SIZE" "$SEED_LABELS"
+python3 - <<'PY' "$POLICIES_FILE" "$DB_PATH" "$SAMPLE_SIZE" "$SEED_LABELS" "$POLICY_KEYS"
 from __future__ import annotations
 import json
 import sqlite3
@@ -33,10 +52,15 @@ policies_path = Path(sys.argv[1])
 db_path = Path(sys.argv[2])
 sample_size = int(sys.argv[3])
 seed_labels = [s.strip() for s in sys.argv[4].split(",") if s.strip()]
+policy_keys = {s.strip() for s in sys.argv[5].split(",") if s.strip()}
 
 policies = json.loads(policies_path.read_text(encoding="utf-8"))
 if not isinstance(policies, list) or not policies:
     raise SystemExit("policies file is empty or invalid")
+if policy_keys:
+    policies = [p for p in policies if str(p.get("key", "")).strip() in policy_keys]
+if not policies:
+    raise SystemExit("no policies selected after POLICY_KEYS filter")
 
 conn = sqlite3.connect(db_path)
 try:
@@ -70,7 +94,7 @@ finally:
     conn.close()
 PY
 
-run_specs="$(python3 - <<'PY' "$POLICIES_FILE" "$SEED_LABELS"
+run_specs="$(python3 - <<'PY' "$POLICIES_FILE" "$SEED_LABELS" "$POLICY_KEYS"
 from __future__ import annotations
 import json
 import sys
@@ -78,6 +102,9 @@ from pathlib import Path
 
 policies = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 seed_labels = [s.strip() for s in sys.argv[2].split(",") if s.strip()]
+policy_keys = {s.strip() for s in sys.argv[3].split(",") if s.strip()}
+if policy_keys:
+    policies = [p for p in policies if str(p.get("key", "")).strip() in policy_keys]
 for policy in policies:
     key = policy["key"]
     for seed in seed_labels:
@@ -110,9 +137,39 @@ while IFS=, read -r policy_key seed_label simulation_id; do
       break
     fi
 
-    status_body="$(curl -sS "$BASE_URL/api/v1/simulations/$simulation_id/status")"
+    status_body="$(curl -sS "$BASE_URL/api/v1/simulations/$simulation_id/status" || true)"
+    if [[ -z "${status_body:-}" ]]; then
+      echo "[calibration] $run_key status=<empty response>; retrying"
+      sleep "$POLL_SECONDS"
+      continue
+    fi
+
     printf '%s\n' "$status_body" > "$RUN_DIR/${run_key}_status.json"
-    terminal_status="$(python3 -c 'import json,sys; b=json.load(sys.stdin); print((b.get("data") or {}).get("status",""))' <<<"$status_body")"
+    terminal_status="$(python3 -c '
+import json
+import sys
+
+raw = sys.argv[1].strip() if len(sys.argv) > 1 else ""
+if not raw:
+    print("__INVALID__")
+    raise SystemExit(0)
+try:
+    payload = json.loads(raw)
+except json.JSONDecodeError:
+    print("__INVALID__")
+    raise SystemExit(0)
+
+data = payload.get("data") if isinstance(payload, dict) else None
+if isinstance(data, dict):
+    print(str(data.get("status") or ""))
+else:
+    print("")
+' "$status_body")"
+    if [[ "$terminal_status" == "__INVALID__" ]]; then
+      echo "[calibration] $run_key status=<invalid json>; retrying"
+      sleep "$POLL_SECONDS"
+      continue
+    fi
     echo "[calibration] $run_key status=$terminal_status"
 
     if [[ "$terminal_status" == "completed" || "$terminal_status" == "failed" ]]; then

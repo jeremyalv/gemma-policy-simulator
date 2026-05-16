@@ -57,6 +57,9 @@
 4. Keep tuning only if:
    - `>=3` nonzero approval buckets in at least 70% of completed runs.
    - mean approvals are not consistently pinned high on controversial policies.
+5. For faster iteration across multiple runtime knobs:
+   - `./scripts/calibration_sweep.sh`
+   - review `leaderboard.md` and pick top-ranked config.
 
 ## High-Risk Changes
 - Make intent explicit in commit message.

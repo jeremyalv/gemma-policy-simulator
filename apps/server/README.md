@@ -170,3 +170,58 @@ python3 scripts/analyze_calibration.py /tmp/infinipol-calibration/run-<timestamp
 
 Acceptance target for controversial-policy calibration:
 - `>=3` nonzero approval buckets in at least `70%` of completed runs.
+
+### Automated Knob Sweep (4–6 configs)
+
+Run multiple `temperature/top_p` combinations and auto-rank results:
+
+```bash
+./scripts/calibration_sweep.sh
+```
+
+Custom combinations:
+
+```bash
+SWEEP_CONFIGS="0.25:0.90,0.35:0.95,0.45:0.98,0.55:0.98" \
+./scripts/calibration_sweep.sh
+```
+
+Outputs:
+- per-combo calibration artifacts under `/tmp/infinipol-calibration-sweep/sweep-<timestamp>/`
+- `leaderboard.csv`
+- `leaderboard.md` (ranked best-to-worst)
+
+Fast local iteration mode (small matrix, much faster):
+
+```bash
+QUICK_MODE=1 ./scripts/calibration_sweep.sh
+```
+
+Quick mode defaults:
+- `SAMPLE_SIZE=40`
+- `POLICY_KEYS=federal_austerity,carbon_dividend`
+- `SWEEP_CONFIGS=0.35:0.95,0.45:0.98,0.55:0.98`
+
+## MVP Demo Profile (Frozen)
+
+For hackathon demo stability, use this runtime profile:
+
+```env
+SIMS_OLLAMA_BASE_URL=http://localhost:11434
+SIMS_RUN_MODEL=gemma:e4b
+SIMS_RUN_TIMEOUT_SECONDS=180
+SIMS_RUN_BATCH_SIZE=2
+SIMS_RUN_MAX_RETRIES=2
+SIMS_RUN_TEMPERATURE=0.35
+SIMS_RUN_TOP_P=0.95
+
+SIMS_RUN_WORKER_ENABLED=1
+SIMS_DB_PATH=apps/server/data/sims.db
+SIMS_DATASET_NEMOTRON_PATH=data/nemotron_usa/nemotron_usa.jsonl
+SIMS_DATASET_NEMOTRON_VERSION=Nemotron-Personas-USA
+SIMS_CORS_ORIGINS=http://localhost:5173
+```
+
+Known limitation in this MVP profile:
+- InfiniPol runs fully local/offline-first with Ollama, but on strongly polarizing policies the model can over-concentrate ratings into 1-2 approval buckets.
+- Treat outputs as directional qualitative signal for policy iteration, not calibrated polling or population-representative forecasting.
