@@ -11,7 +11,7 @@
  * Current flow: FocusPicker → ChallengeDisplay (text generation) → FollowupDisplay
  */
 
-import { Drawer, Stack, Text, Group, Alert, Loader, Box } from '@mantine/core'
+import { Drawer, Stack, Text, Group, Alert, Loader, Box, Button } from '@mantine/core'
 import { AlertCircle, Bot } from 'lucide-react'
 import { FocusPicker }      from './FocusPicker'
 import { ChallengeDisplay } from './ChallengeDisplay'
@@ -152,26 +152,25 @@ export function ChallengeDrawer({
                 {flow.error ?? 'Could not generate challenge.'}
               </Text>
               <Group gap={8}>
-                <Text
+                {/* Real <button>s — keyboard accessible and SR-announced.
+                   Previously these were <Text component="span" onClick>,
+                   which keyboard users could not activate. */}
+                <Button
                   size="xs"
-                  component="span"
-                  style={{
-                    cursor: 'pointer',
-                    color: 'var(--color-status-error)',
-                    textDecoration: 'underline',
-                  }}
+                  variant="subtle"
+                  color="red"
                   onClick={flow.retry}
                 >
                   Retry
-                </Text>
-                <Text
+                </Button>
+                <Button
                   size="xs"
-                  component="span"
-                  style={{ cursor: 'pointer', color: 'var(--color-text-tertiary)', textDecoration: 'underline' }}
+                  variant="subtle"
+                  color="gray"
                   onClick={handleClose}
                 >
                   Close
-                </Text>
+                </Button>
               </Group>
             </Stack>
           </Alert>

@@ -27,8 +27,12 @@ export function DatasetSection({ form }: DatasetSectionProps) {
     )
   }
 
+  function selectDataset(id: string, active: boolean) {
+    if (active) form.setFieldValue('dataset', id)
+  }
+
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" role="radiogroup" aria-label="Dataset selection">
       {datasets.map((ds) => {
         const isActive  = !ds.status || ds.status === 'active'
         const isComingSoon = ds.status === 'coming_v2'
@@ -37,7 +41,19 @@ export function DatasetSection({ form }: DatasetSectionProps) {
         return (
           <Box
             key={ds.id}
-            onClick={() => isActive && form.setFieldValue('dataset', ds.id)}
+            role="radio"
+            tabIndex={isActive ? 0 : -1}
+            aria-checked={isSelected}
+            aria-disabled={!isActive}
+            aria-label={`${ds.name}${isComingSoon ? ' (coming soon)' : ''}`}
+            onClick={() => selectDataset(ds.id, isActive)}
+            onKeyDown={(e) => {
+              if (!isActive) return
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                selectDataset(ds.id, true)
+              }
+            }}
             style={{
               border: `1.5px solid ${
                 isSelected
@@ -52,6 +68,7 @@ export function DatasetSection({ form }: DatasetSectionProps) {
               cursor: isActive ? 'pointer' : 'not-allowed',
               opacity: isActive ? 1 : 0.55,
               transition: 'border-color 150ms, background 150ms',
+              outline: 'none',
             }}
           >
             <Group justify="space-between" wrap="nowrap" align="flex-start">
@@ -61,6 +78,8 @@ export function DatasetSection({ form }: DatasetSectionProps) {
                   checked={isSelected}
                   disabled={!isActive}
                   onChange={() => form.setFieldValue('dataset', ds.id)}
+                  aria-hidden="true"
+                  tabIndex={-1}
                   style={{ marginTop: 2 }}
                   styles={{
                     radio: {
@@ -75,7 +94,7 @@ export function DatasetSection({ form }: DatasetSectionProps) {
                 />
                 <Stack gap={2}>
                   <Group gap={8}>
-                    <Database size={13} color="var(--color-text-tertiary)" />
+                    <Database size={13} color="var(--color-text-tertiary)" aria-hidden="true" />
                     <Text size="sm" fw={600} c="var(--color-text-primary)">
                       {ds.name}
                     </Text>

@@ -55,6 +55,7 @@ interface ChatBubbleProps {
 function Avatar({ role }: { role: BubbleRole }) {
   return (
     <Box
+      aria-hidden="true"
       style={{
         width: 32,
         height: 32,

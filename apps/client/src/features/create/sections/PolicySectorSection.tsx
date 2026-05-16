@@ -236,7 +236,7 @@ export function PolicySectorSection({ form }: PolicySectorSectionProps) {
                   }}
                 >
                   <Group gap={10} align="center">
-                    <Text style={{ fontSize: 16 }}>{domain.emoji}</Text>
+                    <Text style={{ fontSize: 16 }} aria-hidden="true">{domain.emoji}</Text>
                     <Text size="sm" fw={600} c="var(--color-text-primary)">{domain.label}</Text>
                     {domainSelected.length > 0 && (
                       <Badge size="xs" style={{ backgroundColor: `${domain.color}20`, color: domain.color, border: `1px solid ${domain.color}40` }}>
@@ -263,7 +263,10 @@ export function PolicySectorSection({ form }: PolicySectorSectionProps) {
                         <Box
                           key={opt}
                           component="button"
+                          type="button"
                           onClick={() => toggle(opt)}
+                          aria-pressed={active}
+                          aria-label={`${opt} sector${active ? ', selected' : ''}`}
                           style={{
                             fontSize: 12,
                             fontWeight: active ? 600 : 400,

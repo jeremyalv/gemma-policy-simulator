@@ -52,19 +52,31 @@ function RotatingFacts() {
   const [idx, setIdx] = useState(0)
   const [fading, setFading] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Respect prefers-reduced-motion — users who opt out of animation get the
+  // first fact only, no auto-rotation, no fade.
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   useEffect(() => {
+    if (prefersReducedMotion) return
     intervalRef.current = setInterval(() => {
       setFading(true)
-      setTimeout(() => {
+      fadeTimerRef.current = setTimeout(() => {
         setIdx(i => (i + 1) % POLICY_FACTS.length)
         setFading(false)
       }, 400)
     }, 8000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      // Clear the inner setTimeout too — fixes RACE-03 from the R1 audit
+      // where the timer fired on an unmounted component after auto-redirect.
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     }
-  }, [])
+  }, [prefersReducedMotion])
 
   return (
     <Box
@@ -77,7 +89,7 @@ function RotatingFacts() {
       }}
     >
       <Group gap={8} align="flex-start">
-        <Box style={{ flexShrink: 0, marginTop: 1 }}>
+        <Box style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
           <Lightbulb size={14} color="var(--color-accent-primary)" />
         </Box>
         <Box style={{ flex: 1 }}>
