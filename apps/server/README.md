@@ -12,6 +12,30 @@ Integration contract source:
 - `docs/contracts/frontend-backend-v1.md`
 - `packages/contracts/`
 
+## Try in 10 Minutes (No HF Account Required)
+
+One-command quick try (starts Ollama + backend + frontend, then runs a smoke check):
+
+```bash
+make quickstart
+```
+
+Stop all services started by quickstart:
+
+```bash
+make down
+```
+
+Run smoke verification only:
+
+```bash
+SAMPLE_SIZE=20 ./scripts/smoke_e2e.sh
+```
+
+Quickstart uses a bundled mini dataset (`data/quickstart/nemotron_usa_mini.jsonl`) and
+is intended for UX trial/demo only. For larger, more representative runs, use the full
+Nemotron setup in the advanced section below.
+
 ## Local Quickstart (Backend + Ollama)
 
 ### 1. Install dependencies
@@ -89,7 +113,7 @@ python3 -m uvicorn apps.server.app:app --host 0.0.0.0 --port 8000 --reload --env
 Health check:
 
 ```bash
-curl -s http://localhost:8000/health | jq
+curl -s http://localhost:8000/api/v1/datasets | jq
 ```
 
 Then run the normal flow:

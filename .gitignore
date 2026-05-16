@@ -21,6 +21,7 @@ build
 .env.sandbox
 .env.production
 .pnpm-store
+.runtime/
 db/supabase/*
 db/archived_migrations/*
 
@@ -32,3 +33,5 @@ apps/server/data/artifacts/*.json
 
 # Local Nemotron dataset files
 data/nemotron_usa/
+apps/server/data/sims.db-shm
+apps/server/data/sims.db-wal

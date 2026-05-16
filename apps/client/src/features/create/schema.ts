@@ -16,6 +16,21 @@ import {
   EDUCATION_LEVEL_OPTIONS, OCCUPATION_OPTIONS,
 } from './constants'
 
+function resolveDefaultSampleSize(): number {
+  const raw = import.meta.env.VITE_DEFAULT_SAMPLE_SIZE
+  if (!raw) {
+    return 500
+  }
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) {
+    return 500
+  }
+  const rounded = Math.round(parsed)
+  return Math.max(SAMPLE_MIN, Math.min(SAMPLE_MAX, rounded))
+}
+
+const DEFAULT_SAMPLE_SIZE = resolveDefaultSampleSize()
+
 const stateValues    = US_STATES.map((s) => s.value)
 const sexValues      = SEX_OPTIONS.map((s) => s.value)
 const maritalValues  = MARITAL_STATUS_OPTIONS.map((s) => s.value)
@@ -90,7 +105,7 @@ export const CREATE_FORM_DEFAULTS: CreateSimulationFormValues = {
   title: '',
   policy_text: '',
   dataset: 'nemotron_usa',
-  sample_size: 500,
+  sample_size: DEFAULT_SAMPLE_SIZE,
   runtime_profile: 'auto',
   filters: {},
   sector: [],

@@ -7,6 +7,10 @@
 4. Add tests or fixtures for schema and parsing behavior.
 5. Run `./scripts/check.sh` and `./scripts/test.sh`.
 
+## Safety & Trust Positioning Note
+- For hackathon demos, prioritize the local-first quickstart path (`make quickstart`) so judges can verify core behavior without cloud dependency.
+- Position this as an accessibility and trust choice: low setup barrier, privacy-preserving local runtime, and reproducible endpoint flow.
+
 ## Frontend / Backend Coordination
 1. Treat `docs/contracts/frontend-backend-v1.md` and `packages/contracts/` as integration truth.
 2. Backend publishes endpoint readiness with example payload fixtures.

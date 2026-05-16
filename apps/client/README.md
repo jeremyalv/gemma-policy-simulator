@@ -12,6 +12,28 @@ Integration contract source:
 - `docs/contracts/frontend-backend-v1.md`
 - `packages/contracts/`
 
+## Try in 10 Minutes (Recommended)
+
+From repo root:
+
+```bash
+make quickstart
+```
+
+This launches Ollama + backend + frontend in real-backend mode and runs a smoke check.
+
+Stop all services:
+
+```bash
+make down
+```
+
+Re-run smoke verification:
+
+```bash
+SAMPLE_SIZE=20 ./scripts/smoke_e2e.sh
+```
+
 ## Quickstart (Run Frontend)
 
 Prerequisite:
