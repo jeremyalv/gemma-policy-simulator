@@ -13,7 +13,7 @@ import {
 import {
   BarChart2, Zap, GitCompare, Shield, ArrowRight,
   Users, ChevronRight, Activity, Target, CheckCircle,
-  Play, TrendingUp, BookOpen, Microscope, Globe, Rocket, Calendar,
+  Play, TrendingUp, BookOpen, Microscope, Globe, Calendar,
 } from 'lucide-react'
 
 // ── Animation CSS (injected once to <head>) ───────────────────────────────────
@@ -100,22 +100,59 @@ const ANIM_CSS = `
   /* Persona tab (v4 redesign) */
   .lp-persona-tab {
     cursor: pointer;
-    padding: 14px 0;
-    margin-right: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 4px;
+    margin-right: 8px;
+    border: 0;
     border-bottom: 2px solid transparent;
+    background: transparent;
     transition: border-color 180ms, color 180ms;
-    background: none;
     font-family: inherit;
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text-tertiary);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .lp-persona-tab:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+  .lp-persona-tab .lp-persona-tab-index {
+    font-family: 'Source Serif 4', serif;
+    font-size: 12px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-tertiary);
+    transition: color 180ms;
   }
   .lp-persona-tab[data-active="true"] {
     border-bottom-color: var(--color-accent-primary);
     color: var(--color-text-primary);
   }
-  .lp-persona-tab:hover { color: var(--color-text-secondary); }
-  .lp-persona-tab[data-active="true"]:hover { color: var(--color-text-primary); }
+  .lp-persona-tab[data-active="true"] .lp-persona-tab-index {
+    color: var(--color-accent-primary);
+  }
+  .lp-persona-tab:not([data-active="true"]):hover { color: var(--color-text-secondary); }
+
+  /* Pull-statement with vertical accent rule */
+  .lp-pull-statement {
+    position: relative;
+    padding-left: 28px;
+  }
+  .lp-pull-statement::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background-color: var(--color-accent-primary);
+    border-radius: 1px;
+  }
 
   @keyframes lp-fade-in {
     from { opacity: 0; transform: translateY(6px); }
@@ -491,9 +528,15 @@ function LandingHeader() {
     <Box component="header" style={{ height: 56, borderBottom: '1px solid var(--color-border-subtle)', backgroundColor: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
       <Container size="xl" h="100%">
         <Group h="100%" justify="space-between" wrap="nowrap">
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BarChart2 size={22} color="var(--color-accent-primary)" strokeWidth={2.5} />
-            <Text fw={800} size="md" style={{ color: 'var(--color-text-primary)', letterSpacing: '-0.02em', fontFamily: 'Source Serif 4, serif' }}>InfiniPol</Text>
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }} aria-label="InfiniPol home">
+            <img
+              src="/logos/infinipol-logo.svg"
+              alt=""
+              width={26}
+              height={19}
+              style={{ display: 'block' }}
+            />
+            <Text fw={600} size="md" style={{ color: 'var(--color-text-primary)', letterSpacing: '-0.01em', fontFamily: 'Source Serif 4, serif' }}>InfiniPol</Text>
           </Link>
           <Group gap="xs">
             {([{ label: 'Guide', to: '/guide' }, { label: 'About', to: '/about' }] as const).map(({ label, to }) => (
@@ -1069,8 +1112,8 @@ function UseCasesSection() {
           </Text>
         </SimpleGrid>
 
-        {/* Role tabs */}
-        <Group gap={0} wrap="nowrap" role="tablist" aria-label="Policy professional roles" style={{ overflowX: 'auto' }}>
+        {/* Role tabs — with serif indices for visual rhythm */}
+        <Group gap={0} wrap="nowrap" role="tablist" aria-label="Policy professional roles" style={{ overflowX: 'auto', borderBottom: '1px solid var(--color-border-default)' }}>
           {USE_CASES.map((p, i) => (
             <button
               key={p.role}
@@ -1081,17 +1124,19 @@ function UseCasesSection() {
               onClick={() => setActive(i)}
               className="lp-persona-tab"
             >
-              {p.role}
+              <span className="lp-persona-tab-index">{String(i + 1).padStart(2, '0')}</span>
+              <span>{p.role}</span>
             </button>
           ))}
         </Group>
 
         {/* Active persona panel */}
-        <Box style={{ borderTop: '1px solid var(--color-border-default)', paddingTop: 48, marginTop: -2 }}>
+        <Box style={{ paddingTop: 48 }}>
           <SimpleGrid cols={{ base: 1, md: 12 }} spacing={48}>
             <Box style={{ gridColumn: 'span 5' }}>
               <Text
                 key={u.role}
+                className="lp-pull-statement"
                 style={{
                   fontFamily: 'Source Serif 4, serif',
                   fontSize: 'clamp(20px, 2.4vw, 28px)',
@@ -1281,75 +1326,84 @@ function AntiViralHookBanner() {
 // ── GlobalVisionSection ───────────────────────────────────────────────────────
 
 const REGIONS = [
-  { name: 'United States', flag: '🇺🇸', status: 'Live Now', statusColor: '#15803D', detail: '300K+ NVIDIA Nemotron personas across all 50 states + territories' },
-  { name: 'Indonesia',     flag: '🇮🇩', status: 'Q2 2026',  statusColor: '#0D9488', detail: '270M personas across 34 provinces, urban/rural stratified' },
-  { name: 'India',         flag: '🇮🇳', status: 'Q3 2026',  statusColor: '#0369A1', detail: '1.4B population, 28 states + 8 union territories' },
-  { name: 'European Union', flag: '🇪🇺', status: 'Q4 2026', statusColor: '#7C3AED', detail: 'All 27 EU member states, cross-border harmonization focus' },
-  { name: 'Brazil',        flag: '🇧🇷', status: '2027',     statusColor: '#78716C', detail: 'Regionalized by IBGE macroregions and state boundaries' },
-  { name: 'Australia',     flag: '🇦🇺', status: '2027',     statusColor: '#78716C', detail: 'State and territory level, SLA demographic breakdown' },
+  { code: 'US', name: 'United States',  status: 'Live now', live: true,  detail: '300K+ NVIDIA Nemotron personas across all 50 states and territories.' },
+  { code: 'ID', name: 'Indonesia',      status: 'Q2 2026',  live: false, detail: '270M personas across 34 provinces, urban/rural stratified.' },
+  { code: 'IN', name: 'India',          status: 'Q3 2026',  live: false, detail: '1.4B population, 28 states and 8 union territories.' },
+  { code: 'EU', name: 'European Union', status: 'Q4 2026',  live: false, detail: 'All 27 EU member states, cross-border harmonisation focus.' },
+  { code: 'BR', name: 'Brazil',         status: '2027',     live: false, detail: 'Regionalised by IBGE macroregions and state boundaries.' },
+  { code: 'AU', name: 'Australia',      status: '2027',     live: false, detail: 'State and territory level, SLA demographic breakdown.' },
 ]
 
 function GlobalVisionSection() {
   const ref = useRef<HTMLDivElement>(null)
   const visible = useInView(ref, 0.08)
   return (
-    <Box
-      py={80}
-      style={{
-        background: `
-          radial-gradient(ellipse 60% 50% at 50% 50%, rgba(3,105,161,0.05) 0%, transparent 65%),
-          var(--color-bg-surface)
-        `,
-        borderTop: '1px solid var(--color-border-subtle)',
-        borderBottom: '1px solid var(--color-border-subtle)',
-      }}
-    >
+    <Box py={96} style={{ backgroundColor: 'var(--color-bg-base)', borderTop: '1px solid var(--color-border-subtle)' }}>
       <Container size="lg">
-        <Stack gap={56}>
-          <Stack
-            align="center" gap="sm" style={{ textAlign: 'center' }}
-            className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
-          >
-            <Box style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(3,105,161,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <Globe size={22} color="#0369A1" />
-            </Box>
-            <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              Built for the world, starting with the US
+        {/* Two-column section header */}
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} mb={64} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+          <Stack gap={14}>
+            <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+              04 — Coverage
             </Text>
-            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
-              Policy challenges are not bounded by borders. We are building localised, country-specific
-              datasets so every policy professional can test in context, not just against a generic
-              US demographic. InfiniPol is going global, starting with Asia.
+            <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+              Built for the world,<br/>starting with the US.
             </Text>
           </Stack>
+          <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+            Policy challenges aren't bounded by borders. We're building
+            country-specific datasets so every analyst can test in context —
+            not against a generic global demographic.
+          </Text>
+        </SimpleGrid>
 
-          <SimpleGrid ref={ref} cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-            {REGIONS.map((r, i) => (
-              <Box
-                key={r.name}
-                className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
-                style={{
-                  backgroundColor: 'var(--color-bg-base)',
-                  border: '1px solid var(--color-border-subtle)',
-                  borderRadius: 12,
-                  padding: '20px',
-                  transitionDelay: visible ? `${i * 60}ms` : '0ms',
-                  opacity: r.status === 'Live' ? 1 : 0.82,
-                }}
-              >
-                <Group gap={10} align="center" mb={10}>
-                  <Text style={{ fontSize: 24 }}>{r.flag}</Text>
-                  <Box style={{ flex: 1 }}>
-                    <Text fw={700} size="sm" c="var(--color-text-primary)">{r.name}</Text>
-                    <Box style={{ display: 'inline-block', marginTop: 2, backgroundColor: `${r.statusColor}18`, border: `1px solid ${r.statusColor}40`, borderRadius: 20, padding: '2px 8px' }}>
-                      <Text style={{ fontSize: 10, fontWeight: 600, color: r.statusColor }}>{r.status}</Text>
-                    </Box>
-                  </Box>
-                </Group>
-                <Text size="xs" c="var(--color-text-tertiary)" lh={1.5}>{r.detail}</Text>
-              </Box>
-            ))}
-          </SimpleGrid>
+        {/* Editorial region list */}
+        <Stack gap={0} ref={ref}>
+          {REGIONS.map((r, i) => (
+            <Box
+              key={r.code}
+              className="lp-feature-row"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(60px, 80px) minmax(0, 1.2fr) minmax(0, 2fr) minmax(80px, auto)',
+                gap: 32,
+                alignItems: 'baseline',
+                padding: '24px 0',
+                borderTop: '1px solid var(--color-border-subtle)',
+                borderBottom: i === REGIONS.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
+                opacity: r.live ? 1 : 0.78,
+                transition: 'background-color 180ms ease, opacity 180ms ease',
+              }}
+            >
+              <Text style={{ fontFamily: 'Source Serif 4, serif', fontSize: 22, fontWeight: 400, color: 'var(--color-text-tertiary)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>
+                {r.code}
+              </Text>
+              <Group gap={10} align="baseline" wrap="nowrap">
+                {r.live && (
+                  <Box
+                    aria-hidden="true"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-accent-primary)',
+                      flexShrink: 0,
+                      boxShadow: '0 0 0 3px rgba(27,67,50,0.12)',
+                    }}
+                  />
+                )}
+                <Text style={{ fontFamily: 'Source Serif 4, serif', fontSize: 19, fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+                  {r.name}
+                </Text>
+              </Group>
+              <Text style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--color-text-secondary)', maxWidth: '54ch' }}>
+                {r.detail}
+              </Text>
+              <Text style={{ fontSize: 12, fontWeight: r.live ? 600 : 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: r.live ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)', textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                {r.status}
+              </Text>
+            </Box>
+          ))}
         </Stack>
       </Container>
     </Box>
@@ -1418,21 +1472,21 @@ function RoadmapSection() {
     <Box py={80} style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <Container size="lg">
         <Stack gap={52}>
-          <Stack
-            align="center" gap="sm" style={{ textAlign: 'center' }}
-            className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
-          >
-            <Box style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(124,58,237,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <Rocket size={22} color="#7C3AED" />
-            </Box>
-            <Text fw={700} style={{ fontSize: '1.8rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-              From the US to the world
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+            <Stack gap={14}>
+              <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+                Roadmap
+              </Text>
+              <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+                From the US<br/>to the world.
+              </Text>
+            </Stack>
+            <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+              Expanding region by region, with each dataset purpose-built for
+              the demographic and policy context of that market. Asia comes
+              first, then Europe, then global.
             </Text>
-            <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 520 }}>
-              We are expanding region by region, with each dataset purpose-built for the demographic
-              and policy context of that market. Asia comes first, then Europe, then global.
-            </Text>
-          </Stack>
+          </SimpleGrid>
 
           <Box ref={ref} style={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
             {/* Vertical line */}
@@ -1614,38 +1668,50 @@ function ForecastedImpactSection() {
 
           {/* Potential applications */}
           <Stack gap={32}>
-            <Stack align="center" gap="sm" style={{ textAlign: 'center' }} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
-              <Text fw={700} style={{ fontSize: '1.6rem', color: 'var(--color-text-primary)', fontFamily: 'Source Serif 4, serif', letterSpacing: '-0.02em' }}>
-                How teams use InfiniPol
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} className={`lp-reveal ${visible ? 'lp-visible' : ''}`}>
+              <Stack gap={14}>
+                <Text style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
+                  05 — Use cases
+                </Text>
+                <Text component="h2" style={{ fontFamily: 'Source Serif 4, serif', fontSize: 'clamp(1.6rem, 2.8vw, 2.1rem)', fontWeight: 500, lineHeight: 1.12, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', margin: 0 }}>
+                  How teams use<br/>InfiniPol today.
+                </Text>
+              </Stack>
+              <Text style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 420, alignSelf: 'flex-end' }}>
+                AI-assisted analysis works best as an early-stage thinking tool —
+                before fieldwork, before publication, before announcement.
               </Text>
-              <Text size="md" c="var(--color-text-secondary)" style={{ maxWidth: 480 }}>
-                AI-assisted analysis works best as an early-stage thinking tool, before fieldwork, before publication, before announcement.
-              </Text>
-            </Stack>
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
-              {POTENTIAL_APPLICATIONS.map((app, i) => (
-                <Box
-                  key={app.title}
-                  className={`lp-reveal ${visible ? 'lp-visible' : ''}`}
-                  style={{
-                    backgroundColor: 'var(--color-bg-base)',
-                    border: '1px solid var(--color-border-subtle)',
-                    borderRadius: 12,
-                    padding: '20px 24px',
-                    display: 'flex',
-                    gap: 16,
-                    transitionDelay: visible ? `${i * 80}ms` : '0ms',
-                  }}
-                >
-                  <Box style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: `${app.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: app.color, flexShrink: 0 }}>
-                    {app.icon}
+            </SimpleGrid>
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={0} mt={40}>
+              {POTENTIAL_APPLICATIONS.map((app, i) => {
+                const isRightCol = i % 2 === 1
+                const isLastRow  = i >= POTENTIAL_APPLICATIONS.length - 2
+                return (
+                  <Box
+                    key={app.title}
+                    style={{
+                      padding: '32px 28px 32px 0',
+                      paddingLeft: isRightCol ? 32 : 0,
+                      borderTop: '1px solid var(--color-border-subtle)',
+                      borderBottom: isLastRow ? '1px solid var(--color-border-subtle)' : 'none',
+                      borderLeft: isRightCol ? '1px solid var(--color-border-subtle)' : 'none',
+                      transition: 'background-color 180ms ease',
+                    }}
+                  >
+                    <Group gap={12} align="baseline" mb={10} wrap="nowrap">
+                      <Text style={{ fontFamily: 'Source Serif 4, serif', fontSize: 14, fontWeight: 400, color: 'var(--color-accent-primary)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>
+                        {String(i + 1).padStart(2, '0')}
+                      </Text>
+                      <Text style={{ fontFamily: 'Source Serif 4, serif', fontSize: 19, fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+                        {app.title}
+                      </Text>
+                    </Group>
+                    <Text style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: '54ch' }}>
+                      {app.description}
+                    </Text>
                   </Box>
-                  <Box>
-                    <Text fw={700} size="sm" c="var(--color-text-primary)" mb={6}>{app.title}</Text>
-                    <Text size="sm" c="var(--color-text-secondary)" lh={1.65}>{app.description}</Text>
-                  </Box>
-                </Box>
-              ))}
+                )
+              })}
             </SimpleGrid>
           </Stack>
 
