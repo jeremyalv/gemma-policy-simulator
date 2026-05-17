@@ -232,7 +232,7 @@ For hackathon demo stability, use this runtime profile:
 
 ```env
 SIMS_OLLAMA_BASE_URL=http://localhost:11434
-SIMS_RUN_MODEL=gemma:e4b
+SIMS_RUN_MODEL=gemma4:e4b
 SIMS_RUN_TIMEOUT_SECONDS=180
 SIMS_RUN_BATCH_SIZE=2
 SIMS_RUN_MAX_RETRIES=2

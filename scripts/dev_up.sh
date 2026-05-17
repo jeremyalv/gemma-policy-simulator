@@ -107,7 +107,7 @@ fi
 
 RUN_MODEL="$(read_env_value "SIMS_RUN_MODEL" "$ENV_FILE")"
 if [[ -z "$RUN_MODEL" ]]; then
-  RUN_MODEL="gemma:e4b"
+  RUN_MODEL="gemma4:e4b"
 fi
 
 echo "[up] quickstart=$QUICKSTART"
