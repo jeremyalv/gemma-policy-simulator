@@ -131,8 +131,8 @@ Concrete checks include:
 
 Reliability gates in sign-off:
 
-- Backend tests: 113/113 pass.
-- Frontend tests: 19/19 pass.
+- Backend tests: 132/132 pass.
+- Frontend tests: 43/43 pass.
 - Contract checks pass.
 
 ## Global positioning, with honest boundaries

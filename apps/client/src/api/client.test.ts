@@ -112,31 +112,6 @@ describe('apiFetch', () => {
     expect(init.body).toBe(JSON.stringify({ x: 1 }))
   })
 
-  it('returns Response directly for text/csv content type', async () => {
-    const csv = 'col1,col2\n1,2\n'
-    mockFetch(async () => new Response(csv, {
-      status: 200,
-      headers: { 'Content-Type': 'text/csv; charset=utf-8' },
-    }))
-
-    const result = await apiFetch<Response>('/simulations/sim_1/export')
-    expect(result).toBeInstanceOf(Response)
-  })
-
-  it('throws EXPORT_ERROR for non-OK csv response', async () => {
-    mockFetch(async () => new Response('error', {
-      status: 500,
-      headers: { 'Content-Type': 'text/csv' },
-    }))
-
-    try {
-      await apiFetch('/simulations/sim_1/export')
-      throw new Error('expected throw')
-    } catch (err) {
-      expect(err).toBeInstanceOf(ApiError)
-      expect((err as ApiError).code).toBe('EXPORT_ERROR')
-    }
-  })
 })
 
 // ── apiFetchWithMeta — meta exposure ────────────────────────────────────────

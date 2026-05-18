@@ -8,7 +8,7 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 - 🟡 MEDIUM — quality, maintainability, secondary UX
 - ⚪ LOW — cosmetic, dead code, micro-perf
 
-**Last updated:** 2026-05-16 · **HEAD:** `90afee5`
+**Last updated:** 2026-05-18 · **HEAD:** `616608c`
 
 ---
 
@@ -65,6 +65,18 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 | R2-B-Clar | 🟢 | Coverage | `useClarificationFlow` not tested | 7-test suite covering turn-accumulation stale-closure regression + terminal conditions + skip/retry |
 | R2-B-Client | 🟢 | Coverage | `apiFetch` / `apiFetchWithMeta` (transport + envelope) untested | 9-test suite covering NETWORK_ERROR, PARSE_ERROR, error envelope, Idempotency-Key, CSV branch |
 
+### Round 7 (current session) — perf + a11y + dead code
+
+| ID | Sev | Area | Issue | Fix |
+|---|---|---|---|---|
+| R2-C-3 | 🟠 | Perf | Results/Export re-parsed full artifact JSON on every poll | `_load_artifact_raw_outputs()` cache keyed by `(sim_id, mtime_ns)` in `service.py` |
+| R2-C-6 | 🟠 | Perf | CSV export materialised all rows in memory; OOM risk on 100k+ runs | `export_simulation_csv` now a generator; `app.py` uses `StreamingResponse` |
+| R2-D-H3 | 🟠 | A11y | `PolicyDiff` used color alone for added/removed (WCAG 1.4.1) | `<del>`/`<ins>` semantic elements; underline added to insertions as non-color cue |
+| R2-D-H6 | 🟠 | A11y | RunQualityBanner dismiss button ~22×22px (below WCAG 2.5.5 AA 24×24) | `minWidth/minHeight: 28`, adjusted padding |
+| R2-D-H8 | 🟠 | A11y | PolicySection upload trigger had no `aria-controls` linking to file input | Added `id="policy-file-upload"` on input; `aria-controls` on Button |
+| R1-FE-DEAD | ⚪ | Cleanup | `downloadSimulationCsv` + `getExportUrl` exported but never imported | Deleted from `export.ts` + `api/index.ts` |
+| R1-FE-DEAD-02 | ⚪ | Cleanup | `apiFetch` CSV branch is dead code (export.ts uses raw fetch) | Removed branch + 2 corresponding tests from `client.test.ts` |
+
 ### Round 5/6 partial (commit `90afee5`) — kept only typo + logo, redesign reverted
 
 | ID | Sev | Area | Issue | Fix |
@@ -98,12 +110,10 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 | R2-A-Thread | Security | Unbounded daemon-thread fan-out per `/run` → trivial DoS without rate limit | Needs worker pool or queue; bigger refactor |
 | R2-B-FE | Coverage | Most feature flows still have no tests (Dashboard, Comparison, CreatePage form, ResultsPage charts) | Each is its own suite of effort |
 | R2-B-E2E | Coverage | No end-to-end integration test (create → clarify → run → results → export → challenge) | Needs Playwright/Cypress harness setup |
-| R2-C-3 | Perf | Results / Export endpoints re-parse the full artifact JSON on every poll | Needs in-process cache with TTL |
-| R2-C-6 | Perf | CSV export materialises all rows in memory; OOM risk on 100k+ runs | Needs streaming `StreamingResponse` rewrite |
-| R2-D-H3 | A11y | `PolicyDiff` may rely on color alone for added/removed (not verified) | Need to audit `PolicyDiff` component |
-| R2-D-H6 | A11y | RunQualityBanner dismiss button ~22×22px (below WCAG 2.5.5 AA 24×24) | Cosmetic but real; bump padding |
+| R2-D-H3 | A11y | `PolicyDiff` may rely on color alone for added/removed (not verified) | ✅ Fixed R7 |
+| R2-D-H6 | A11y | RunQualityBanner dismiss button ~22×22px (below WCAG 2.5.5 AA 24×24) | ✅ Fixed R7 |
 | R2-D-H7 | A11y | Challenge FAB on ResultsPage lacks `aria-haspopup="dialog"` + `aria-expanded`; FocusPicker tabIndex doesn't follow roving pattern | Multi-step refactor |
-| R2-D-H8 | A11y | PolicySection upload trigger has no `aria-controls` linking to file input | Quick fix; not yet applied |
+| R2-D-H8 | A11y | PolicySection upload trigger has no `aria-controls` linking to file input | ✅ Fixed R7 |
 | R1-BE-6 | Race | Worker thread spawned before SQLite commit visible (no WAL when first written) | Partially mitigated by R3 WAL mode; full fix needs pass-by-value of sim row |
 | R1-BE-5 | Data | Clarification question text + rationale not persisted — irretrievable if client loses response | Schema change needed |
 | R1-BE-3 | Code smell | `body` variable shadowed in HTTPError handler (both `simulation_runner.py:225` + `clarification_generator.py:108`) | Cosmetic; not crash |
@@ -131,7 +141,7 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 | R1-FE-FLOW-05 | UX | No "back to picking" escape from challenge `error` state after followup fails | Add reset button |
 | R1-FE-FLOW-06 | UX | `/simulations/:id/clarify` accessible for completed sims → 409 LIFECYCLE_CONFLICT loop | Add lifecycle redirect |
 | R2-D-UX | UX | RunQualityBanner dismissed state not persisted — reappears on reload | `localStorage` keyed by sim id |
-| R1-FE-DEAD | Cleanup | `downloadSimulationCsv` + `getExportUrl` exported but never imported | Delete |
+| R1-FE-DEAD | Cleanup | `downloadSimulationCsv` + `getExportUrl` exported but never imported | ✅ Fixed R7 |
 | LANDING-1 | UI | Landing page sections still look "AI-templated" per user feedback (R5/R6 attempt reverted) | Needs different design direction |
 
 ### ⚪ LOW
@@ -157,7 +167,7 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 | R2-D-L6 | A11y | Emoji informational badges read verbatim by SR — wrap `aria-hidden` when redundant |
 | R2-D-L7 | A11y | Form errors not associated to inputs via `aria-describedby` / `aria-invalid` |
 | R2-D-L8 | A11y | ChallengeDisplay char counter not announced — `aria-live` for warn state |
-| R1-FE-DEAD-02 | Cleanup | `apiFetch` CSV branch is dead code (export.ts uses raw fetch) |
+| R1-FE-DEAD-02 | Cleanup | `apiFetch` CSV branch is dead code (export.ts uses raw fetch) | ✅ Fixed R7 |
 | R1-FE-DEAD-03 | Cleanup | `ThemeSwitcher` null-branch in production is unusual pattern |
 
 ---
@@ -176,8 +186,8 @@ Comprehensive log of issues raised by the 6 council rounds (R1–R6), grouped by
 
 ## Gates (current HEAD `90afee5`)
 
-- **Backend pytest**: 129 / 129 ✅ (+13 new since baseline)
-- **Frontend vitest**: 43 / 43 ✅ (+24 new since baseline)
+- **Backend pytest**: 132 / 132 ✅ (+16 new since baseline)
+- **Frontend vitest**: 41 / 41 ✅ (+22 new since baseline; 2 dead-code tests removed)
 - **TypeScript build**: 0 errors ✅
 
 ---

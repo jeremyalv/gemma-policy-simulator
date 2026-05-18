@@ -78,15 +78,6 @@ export async function apiFetch<T>(
   options: FetchOptions = {},
 ): Promise<T> {
   const response = await executeRequest(path, options)
-
-  // CSV export endpoint returns raw text — handle separately
-  if (response.headers.get('Content-Type')?.includes('text/csv')) {
-    if (!response.ok) {
-      throw new ApiError('EXPORT_ERROR', 'Export failed', response.status)
-    }
-    return response as unknown as T
-  }
-
   const envelope = await parseEnvelope<T>(response, path)
   return unwrap(envelope, response.status)
 }

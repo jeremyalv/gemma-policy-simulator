@@ -10,28 +10,6 @@
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') + '/api/v1'
 
 /**
- * Trigger CSV download in the browser.
- * Opens the export URL in a new tab -- browser handles the download.
- */
-export function downloadSimulationCsv(simulationId: string): void {
-  const url = `${API_BASE}/simulations/${simulationId}/export`
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `infinipol-${simulationId}-results.csv`
-  a.rel = 'noopener noreferrer'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-}
-
-/**
- * Get the raw export URL (useful for <a href> links).
- */
-export function getExportUrl(simulationId: string): string {
-  return `${API_BASE}/simulations/${simulationId}/export`
-}
-
-/**
  * Fetch the CSV export and trigger a browser download.
  *
  * Unlike a plain <a href> approach, this lets us inspect the HTTP status

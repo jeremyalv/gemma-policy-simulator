@@ -58,7 +58,7 @@ export type {
 export { listDatasets } from './endpoints/datasets'
 export type { DatasetItem } from './endpoints/datasets'
 
-export { downloadSimulationCsv, getExportUrl, fetchSimulationCsv } from './endpoints/export'
+export { fetchSimulationCsv } from './endpoints/export'
 
 export { ApiError, unwrap } from '@/lib/envelope'
 export type { ApiErrorCode, ApiMeta, ApiEnvelope } from '@/lib/envelope'

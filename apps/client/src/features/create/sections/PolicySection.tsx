@@ -93,12 +93,14 @@ export function PolicySection({ form }: PolicySectionProps) {
             variant="subtle"
             leftSection={<Upload size={11} />}
             onClick={() => fileInputRef.current?.click()}
+            aria-controls="policy-file-upload"
             style={{ color: 'var(--color-text-tertiary)' }}
           >
             Upload .txt / .md
           </Button>
           <input
             ref={fileInputRef}
+            id="policy-file-upload"
             type="file"
             accept=".txt,.md,text/plain,text/markdown"
             style={{ display: 'none' }}

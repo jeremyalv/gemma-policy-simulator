@@ -61,10 +61,9 @@ export function RunQualityBanner({ telemetry }: RunQualityBannerProps) {
           variant="subtle"
           color="gray"
           size="xs"
-          p={4}
           aria-label="Dismiss quality warning"
           onClick={() => setDismissed(true)}
-          style={{ flexShrink: 0 }}
+          style={{ flexShrink: 0, minWidth: 28, minHeight: 28, padding: '5px 7px' }}
         >
           <X size={14} />
         </Button>

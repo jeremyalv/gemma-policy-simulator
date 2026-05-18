@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from packages.contracts.python.contracts_v1 import ErrorEnvelope
@@ -244,7 +244,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     @app.get("/api/v1/simulations/{simulation_id}/export", status_code=200)
     async def export_simulation_results_csv(simulation_id: str) -> Any:
         try:
-            csv_content = export_simulation_csv(store, simulation_id)
+            csv_iter = export_simulation_csv(store, simulation_id)
         except ApiError as exc:
             return error_envelope(exc.status_code, exc.code, exc.message)
 
@@ -253,8 +253,8 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         # simulation_id is invalid the upstream service call will already have
         # raised NOT_FOUND; this is defense-in-depth.
         safe_id = "".join(c for c in simulation_id if c.isalnum() or c in ("_", "-"))[:32]
-        return Response(
-            content=csv_content,
+        return StreamingResponse(
+            csv_iter,
             media_type="text/csv; charset=utf-8",
             headers={
                 "Content-Disposition": f'attachment; filename="infinipol-{safe_id}-results.csv"'

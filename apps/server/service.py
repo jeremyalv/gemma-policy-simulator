@@ -71,6 +71,45 @@ _SIM_ID_RE = re.compile(r"^sim_[A-Za-z0-9_-]{1,32}$")
 _CLARIFICATION_ID_RE = re.compile(r"^cl_[A-Za-z0-9_-]{1,32}$")
 _CHALLENGE_ID_RE = re.compile(r"^ch_[A-Za-z0-9_-]{1,32}$")
 
+# ── Artifact cache (R2-C-3) ──────────────────────────────────────────────────
+# Artifacts are immutable once written (a simulation completes exactly once).
+# Keying by (simulation_id, mtime_ns) means we correctly re-read if the file
+# is ever replaced (e.g. in tests) while avoiding repeated JSON parse on every
+# /results or /export poll in production.
+_ARTIFACT_CACHE: dict[str, tuple[int, list[dict[str, Any]]]] = {}
+
+
+def _load_artifact_raw_outputs(simulation_id: str) -> list[dict[str, Any]]:
+    """Return cached raw_outputs list for a completed simulation's artifact JSON."""
+    artifact_path = run_artifact_path(simulation_id)
+    if not artifact_path.exists():
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"missing run artifact for completed simulation: {simulation_id}",
+            status_code=500,
+        )
+    mtime_ns = artifact_path.stat().st_mtime_ns
+    cached = _ARTIFACT_CACHE.get(simulation_id)
+    if cached is not None and cached[0] == mtime_ns:
+        return cached[1]
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"invalid run artifact JSON for simulation: {simulation_id}",
+            status_code=500,
+        ) from exc
+    raw_outputs = artifact.get("raw_outputs")
+    if not isinstance(raw_outputs, list):
+        raise ApiError(
+            code="INTERNAL_ERROR",
+            message=f"run artifact missing raw_outputs for simulation: {simulation_id}",
+            status_code=500,
+        )
+    _ARTIFACT_CACHE[simulation_id] = (mtime_ns, cast(list[dict[str, Any]], raw_outputs))
+    return cast(list[dict[str, Any]], raw_outputs)
+
 
 def _validate_id_format(value: str, pattern: re.Pattern[str], kind: str) -> str:
     if not isinstance(value, str) or not pattern.match(value):
@@ -1035,30 +1074,7 @@ def get_simulation_results(store: SimulationStore, simulation_id: str) -> Simula
             status_code=409,
         )
 
-    artifact_path = run_artifact_path(simulation_id)
-    if not artifact_path.exists():
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"missing run artifact for completed simulation: {simulation_id}",
-            status_code=500,
-        )
-
-    try:
-        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"invalid run artifact JSON for simulation: {simulation_id}",
-            status_code=500,
-        ) from exc
-
-    raw_outputs = artifact.get("raw_outputs")
-    if not isinstance(raw_outputs, list):
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"run artifact missing raw_outputs for simulation: {simulation_id}",
-            status_code=500,
-        )
+    raw_outputs = _load_artifact_raw_outputs(simulation_id)
 
     runtime_profile = _resolve_runtime_profile(simulation)
     effective_sample_size = _resolve_agents_total(simulation) or len(raw_outputs)
@@ -1302,30 +1318,7 @@ def export_simulation_csv(store: SimulationStore, simulation_id: str) -> str:
             status_code=409,
         )
 
-    artifact_path = run_artifact_path(simulation_id)
-    if not artifact_path.exists():
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"missing run artifact for completed simulation: {simulation_id}",
-            status_code=500,
-        )
-
-    try:
-        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"invalid run artifact JSON for simulation: {simulation_id}",
-            status_code=500,
-        ) from exc
-
-    raw_outputs = artifact.get("raw_outputs")
-    if not isinstance(raw_outputs, list):
-        raise ApiError(
-            code="INTERNAL_ERROR",
-            message=f"run artifact missing raw_outputs for simulation: {simulation_id}",
-            status_code=500,
-        )
+    raw_outputs = _load_artifact_raw_outputs(simulation_id)
 
     fieldnames = [
         "persona_id",
@@ -1339,47 +1332,60 @@ def export_simulation_csv(store: SimulationStore, simulation_id: str) -> str:
         "rationale",
         "behavioral_change",
     ]
-    rows: list[dict[str, Any]] = []
-    for item in raw_outputs:
+
+    # Sort by persona_id for deterministic output order.
+    def _sort_key(item: Any) -> str:
         if not isinstance(item, dict):
-            raise ApiError(
-                code="INTERNAL_ERROR",
-                message=f"invalid run artifact contents for simulation: {simulation_id}",
-                status_code=500,
-            )
+            return ""
         persona = item.get("persona")
-        response = item.get("response")
-        if not isinstance(persona, dict) or not isinstance(response, dict):
-            raise ApiError(
-                code="INTERNAL_ERROR",
-                message=f"invalid run artifact contents for simulation: {simulation_id}",
-                status_code=500,
+        return str(persona.get("persona_id", "")) if isinstance(persona, dict) else ""
+
+    sorted_outputs = sorted(raw_outputs, key=_sort_key)
+
+    # ── Streaming generator (R2-C-6) ─────────────────────────────────────────
+    # Yield one CSV line at a time so FastAPI's StreamingResponse never holds
+    # the full dataset in memory — safe for 100k+ persona runs.
+    def _iter_csv() -> Any:
+        header_buf = StringIO()
+        DictWriter(header_buf, fieldnames=fieldnames, extrasaction="ignore").writeheader()
+        yield header_buf.getvalue()
+
+        for item in sorted_outputs:
+            if not isinstance(item, dict):
+                raise ApiError(
+                    code="INTERNAL_ERROR",
+                    message=f"invalid run artifact contents for simulation: {simulation_id}",
+                    status_code=500,
+                )
+            persona = item.get("persona")
+            response = item.get("response")
+            if not isinstance(persona, dict) or not isinstance(response, dict):
+                raise ApiError(
+                    code="INTERNAL_ERROR",
+                    message=f"invalid run artifact contents for simulation: {simulation_id}",
+                    status_code=500,
+                )
+            behavior_change = response.get("behavior_change")
+            behavior_change_text = ""
+            if isinstance(behavior_change, bool):
+                behavior_change_text = "true" if behavior_change else "false"
+
+            row_buf = StringIO()
+            writer = DictWriter(row_buf, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writerow(
+                {
+                    "persona_id": persona.get("persona_id", ""),
+                    "name": _csv_safe(persona.get("name", "")),
+                    "age": persona.get("age", ""),
+                    "occupation": _csv_safe(persona.get("occupation", "")),
+                    "city": _csv_safe(persona.get("city", "")),
+                    "state": _csv_safe(persona.get("state", "")),
+                    "approval": response.get("approval", ""),
+                    "emotion": _csv_safe(response.get("emotion", "")),
+                    "rationale": _csv_safe(response.get("rationale", "")),
+                    "behavioral_change": behavior_change_text,
+                }
             )
+            yield row_buf.getvalue()
 
-        behavior_change = response.get("behavior_change")
-        behavior_change_text = ""
-        if isinstance(behavior_change, bool):
-            behavior_change_text = "true" if behavior_change else "false"
-
-        rows.append(
-            {
-                "persona_id": persona.get("persona_id", ""),
-                "name": _csv_safe(persona.get("name", "")),
-                "age": persona.get("age", ""),
-                "occupation": _csv_safe(persona.get("occupation", "")),
-                "city": _csv_safe(persona.get("city", "")),
-                "state": _csv_safe(persona.get("state", "")),
-                "approval": response.get("approval", ""),
-                "emotion": _csv_safe(response.get("emotion", "")),
-                "rationale": _csv_safe(response.get("rationale", "")),
-                "behavioral_change": behavior_change_text,
-            }
-        )
-
-    rows.sort(key=lambda row: str(row["persona_id"]))
-
-    output = StringIO()
-    writer = DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(rows)
-    return output.getvalue()
+    return _iter_csv()

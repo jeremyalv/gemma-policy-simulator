@@ -50,8 +50,10 @@ export function PolicyDiff({ original, revised }: PolicyDiffProps) {
           )
         }
         if (op === DIFF_DELETE) {
+          // <del> is semantically "deleted text" — screen readers announce it.
+          // line-through is a non-color visual cue (satisfies WCAG 1.4.1).
           return (
-            <span
+            <del
               key={i}
               style={{
                 color: 'var(--color-status-error)',
@@ -62,12 +64,14 @@ export function PolicyDiff({ original, revised }: PolicyDiffProps) {
               }}
             >
               {text}
-            </span>
+            </del>
           )
         }
         if (op === DIFF_INSERT) {
+          // <ins> is semantically "inserted text" — screen readers announce it.
+          // underline is a non-color visual cue alongside green bg (satisfies WCAG 1.4.1).
           return (
-            <span
+            <ins
               key={i}
               style={{
                 color: 'var(--color-status-success)',
@@ -75,10 +79,12 @@ export function PolicyDiff({ original, revised }: PolicyDiffProps) {
                 borderRadius: 2,
                 padding: '0 2px',
                 fontWeight: 600,
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--color-status-success)',
               }}
             >
               {text}
-            </span>
+            </ins>
           )
         }
         return null
