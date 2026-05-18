@@ -55,7 +55,7 @@ cp .env.example .env
 ```
 3. Pull model:
 ```bash
-ollama pull gemma:e4b
+ollama pull gemma4:e4b
 ```
 4. Start all services:
 ```bash
@@ -70,10 +70,10 @@ make down
 
 ## Full setup docs
 
-- Backend setup: [apps/server/README.md](/Users/jeremyalv/Documents/4-Engineering/gemma-policy-simulator/apps/server/README.md)
-- Frontend setup: [apps/client/README.md](/Users/jeremyalv/Documents/4-Engineering/gemma-policy-simulator/apps/client/README.md)
-- Sign-off evidence: [docs/frontend/SIGNOFF_EVIDENCE_2026-05-13.md](/Users/jeremyalv/Documents/4-Engineering/gemma-policy-simulator/docs/frontend/SIGNOFF_EVIDENCE_2026-05-13.md)
-- Submission assets: [docs/submission/](/Users/jeremyalv/Documents/4-Engineering/gemma-policy-simulator/docs/submission)
+- Backend setup: [apps/server/README.md](apps/server/README.md)
+- Frontend setup: [apps/client/README.md](apps/client/README.md)
+- Sign-off evidence: [docs/frontend/SIGNOFF_EVIDENCE_2026-05-13.md](docs/frontend/SIGNOFF_EVIDENCE_2026-05-13.md)
+- Submission assets: [docs/submission/](docs/submission/)
 
 ## Known limitations (current MVP)
 
